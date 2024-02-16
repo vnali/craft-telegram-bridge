@@ -41,7 +41,7 @@
         "handle": "telegram-bridge",
         "hasCpSettings": true,
         "hasCpSection": true,
-		"class": "vnali\\telegrambridge\\TelegramBridge",
+        "class": "vnali\\telegrambridge\\TelegramBridge",
         "developer": "vnali",
         "documentationUrl": "https://github.com/vnali/craft-telegram-bridge-docs"
     },
