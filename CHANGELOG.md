@@ -1,0 +1,1 @@
+# Release Notes for Telegram Bridge plugin

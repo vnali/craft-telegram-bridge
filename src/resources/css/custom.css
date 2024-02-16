@@ -1,0 +1,23 @@
+.telegram-bridge-info {
+    position: relative;
+    background-color: #eff6ff;
+    border-left: 6px solid #2563eb;
+    color: #2563eb;
+    padding: 10px;
+}
+
+.telegram-bridge-warning {
+    position: relative;
+    background-color: #fffbeb;
+    border-left: 6px solid #d97706;
+    color: #d97706;
+    padding: 10px;
+}
+
+.telegram-bridge-error {
+    position: relative;
+    background-color: #fef2f2;
+    border-left: 6px solid #dc2626;
+    color: #dc2626;
+    padding: 10px;
+}

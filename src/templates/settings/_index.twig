@@ -1,0 +1,93 @@
+{% extends "_layouts/cp" %}
+
+{% set title = 'Settings' %}
+
+{% set crumbs = [] %}
+
+{% set selectedSubnavItem = 'settings' %} 
+
+{% block content %}
+
+	{% import '_includes/forms' as forms %}
+
+    {% if infos %}
+		<h2> {{ 'Information'|t('telegram-bridge') }} </h2>
+	{% endif %}
+
+	{% for key, info in infos %}
+		<div class="telegram-bridge-info">
+			<b>{{ key }}</b> - {{ info }}
+		</div>
+		<br>
+	{% endfor %}
+
+    <div>
+        <pre>{{ accessTable|raw }}</pre>
+    </div>
+
+    <br>
+
+    {% if errors %}
+		<h2> {{ 'Errors'|t('telegram-bridge') }} </h2>
+	{% endif %}
+
+	{% for error in errors %}
+		<div class="telegram-bridge-error">
+			{{ error }}
+		</div>
+		<br>
+	{% endfor %}
+
+    {% if warnings %}
+		<h2> {{ 'Warnings'|t('telegram-bridge') }} </h2>
+	{% endif %}
+
+	{% for warning in warnings %}
+		<div class="telegram-bridge-warning">
+			{{ warning }}
+		</div>
+		<br>
+	{% endfor %}
+
+    <hr>
+
+	<form action="" method="post" accept-charset="UTF-8">
+
+    	{{ csrfInput() }}
+
+        {{ forms.textField({
+            first: true,
+            label: 'Webhook URL'|t('telegram-bridge'),
+            id: 'webhook-url',
+            name: 'webhook-url',
+            value: webhookAddress,
+            readonly: true,
+            disabled: true,
+            tip: 'It should be set by TELEGRAM_WEBHOOK_ADDRESS environment setting like https://example.test/telegram-bridge/telegram-webhook'|t('telegram-bridge')
+        }) }}
+
+		<input type="hidden" name="action" value="telegram-bridge/settings/set-webhook"/>
+
+		<input type="submit" class="btn submit" value="{{ 'Set Webhook'|t('telegram-bridge') }}">
+
+		{{ redirectInput('telegram-bridge/settings') }}
+
+	</form>
+
+	<br>
+
+	<form action="" method="post" accept-charset="UTF-8">
+
+    	{{ csrfInput() }}
+
+		<input type="hidden" name="action" value="telegram-bridge/settings/delete-webhook"/>
+
+		<input type="submit" class="btn submit" value="{{ 'Delete Webhook'|t('telegram-bridge') }}">
+
+		{{ redirectInput('telegram-bridge/settings') }}
+
+	</form>
+
+{% endblock %}
+
+{% do view.registerAssetBundle("vnali\\telegrambridge\\assets\\TelegramBridgeAsset") %}

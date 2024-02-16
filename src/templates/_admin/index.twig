@@ -1,0 +1,50 @@
+{% extends "_layouts/cp" %}
+
+{% set title = 'Getting updates' %}
+
+{% set crumbs = [] %}
+
+{% set selectedSubnavItem = 'get-updates' %}
+
+{% block content %}
+
+{% if not setWebhook  %}
+	<div class="telegram-bridge-info">
+		{{ 'This page get latest update per {milliseconds} milliseconds'|t(
+                category = 'telegram-bridge',
+                params = {
+                    milliseconds: autoRefresh,
+                }) 
+            }}
+	</div>
+	{% js %}
+        function fetchData() {
+            var timeout;
+            $.ajax({
+                url: 'get-updates', // Replace with your API endpoint
+                type: 'GET',
+                timeout: 20000,
+                success: function(data) {
+                },
+                error: function(xhr, status, error) {
+                    if (status === 'timeout') {
+                        console.log('Request timed out');
+                    }
+                },
+                complete: function() {
+                    // Set a timeout to fetch data again after autoRefresh seconds
+                    timeout = setTimeout(fetchData, {{ autoRefresh|integer }});
+                }
+            });
+        }
+        // Initial call to start fetching data
+        fetchData();
+	{% endjs %}
+{% else %}
+	<div class="telegram-bridge-info">
+		{{ 'Get updates won\'t work when webhook is set.' }}
+    </div>
+{% endif %}
+{% endblock %}
+
+{% do view.registerAssetBundle("vnali\\telegrambridge\\assets\\TelegramBridgeAsset") %}

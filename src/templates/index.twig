@@ -1,0 +1,7 @@
+{% if craft.app.config.general.allowAdminChanges and currentUser.can('telegram-bridge-manageSettings') %}
+    {% redirect 'telegram-bridge/settings' %}
+{% elseif currentUser.can('telegram-bridge-getUpdates') %}
+    {% redirect 'telegram-bridge/get-updates' %}
+{% else %}
+    {% redirect 'dashboard' %}
+{% endif %}
