@@ -334,9 +334,9 @@ class DefaultController extends Controller
         $variables['setWebhook'] = $setWebhook;
         //
         $variables['autoRefresh'] = 1000;
-        $auto_refresh_get_updates_per_milli_sec = App::parseEnv('$AUTO_REFRESH_GET_UPDATES_PER_MILLI_SEC');
-        if ($auto_refresh_get_updates_per_milli_sec && $auto_refresh_get_updates_per_milli_sec != '$AUTO_REFRESH_GET_UPDATES_PER_MILLI_SEC') {
-            $variables['autoRefresh'] = $auto_refresh_get_updates_per_milli_sec;
+        $auto_refresh_get_updates_per_millisec = App::parseEnv('$AUTO_REFRESH_GET_UPDATES_PER_MILLISEC');
+        if ($auto_refresh_get_updates_per_millisec && $auto_refresh_get_updates_per_millisec != '$AUTO_REFRESH_GET_UPDATES_PER_MILLISEC') {
+            $variables['autoRefresh'] = $auto_refresh_get_updates_per_millisec;
         }
         return $this->renderTemplate('telegram-bridge/_admin/index.twig', $variables);
     }
