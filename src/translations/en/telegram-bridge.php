@@ -70,7 +70,7 @@ return [
     'User is not defined for this chat id.' => 'User is not defined for this chat id.',
     'Warnings' => 'Warnings',
     'Webhook URL' => 'Webhook URL',
-    'You should specify TELEGRAM_BOT_TOKEN environment setting' => 'You should specify TELEGRAM_BOT_TOKEN environment setting',
+    'You should specify TELEGRAM_BOT_TOKEN environment setting.' => 'You should specify TELEGRAM_BOT_TOKEN environment setting.',
     'You should specify TELEGRAM_WEBHOOK_ADDRESS environment setting.' => 'You should specify TELEGRAM_WEBHOOK_ADDRESS environment setting.',
     'You should specify X_TELEGRAM_BOT_API_SECRET_TOKEN environment setting.' => 'You should specify X_TELEGRAM_BOT_API_SECRET_TOKEN environment setting.',
 ];

@@ -121,7 +121,7 @@ class TelegramBridge extends Plugin
                 if (!$event->sender->propagating) {
                     $cache = Craft::$app->getCache();
                     $newUserInfo = $event->sender;
-                    // TODO: We should only check for attributes that has impact on the plugin lihe user's language preference
+                    // TODO: We should only check for attributes that has impact on the plugin like user's language preference
                     $chatId = TelegramBridge::$plugin->chatId->getChatIdByUser($newUserInfo->username);
                     if ($chatId) {
                         $cache->set('user_changed_' . $chatId, true, 0, new TagDependency(['tags' => ['telegram-bridge', 'telegram-bridge-' . $chatId]]));

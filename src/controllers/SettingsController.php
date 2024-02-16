@@ -112,7 +112,7 @@ class SettingsController extends Controller
 
         // Check format of provided configs
         if ($supportedChatIds[0] == '$ALLOWED_TELEGRAM_CHAT_IDS') {
-            // We don't set error because $ALLOWED_TELEGRAM_CHAT_IDS is not neccessary when we want to only sent request via craft webhook
+            // We don't set error because $ALLOWED_TELEGRAM_CHAT_IDS is not necessary when we want to only sent request via craft webhook
             $warnings[] = 'You should specify ALLOWED_TELEGRAM_CHAT_IDS environment setting to allow chats to interact with the plugin.';
         } elseif (Craft::$app->getEdition() === Craft::Pro && $enabledGQL && count($supportedChatIds) != count($supportedChatIdsGqlToken)) {
             // Check if count of telegram chat ids and their gql tokens are equal
