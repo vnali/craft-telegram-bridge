@@ -169,10 +169,19 @@ class CraftTool implements ToolTypeInterface
         $tableBuilder = new Builder();
         if ($toolType == self::RecentEntries) {
             if ($user) {
-                $entries = self::_getEntries($section, $limit, $siteId, $chatId);
+                $entries = self::_getEntries($section, $siteId, $chatId);
                 $tableBuilder->headers([craft::t('app', 'Title', [], $language), craft::t('app', 'Date Created', [], $language), craft::t('app', 'Author', [], $language)])->align(['L', 'L', 'L']); // set column alignment
+                $limitCounter = 0;
                 foreach ($entries as $entry) {
-                    $tableBuilder->row([$entry->title, $entry->dateCreated->format('Y-m-d H:i'), $entry->getAuthor()->username]);
+                    if ($limitCounter == $limit) {
+                        break;
+                    }
+                    $section = $entry->getSection();
+                    $sectionUid = $section->uid;
+                    if ($user->can('viewPeerEntries:' . $sectionUid) || ($user->can('viewEntries:' . $sectionUid) && ($entry->getAuthorId() == $user->id))) {
+                        $tableBuilder->row([$entry->title, $entry->dateCreated->format('Y-m-d H:i'), $entry->getAuthor()->username]);
+                        $limitCounter++;
+                    }
                 }
                 $messageText = craft::t('app', self::RecentEntries, [], $language) . PHP_EOL . '<pre>' . $tableBuilder->render() . '</pre>';
             }
@@ -248,12 +257,11 @@ class CraftTool implements ToolTypeInterface
      * Returns the recent entries, based on the tool settings and user permissions.
      *
      * @param string $section
-     * @param int|null $limit
      * @param int $siteId
      * @param string $chatId
      * @return array
      */
-    private static function _getEntries(string $section, ?int $limit, int $siteId, string $chatId): array
+    private static function _getEntries(string $section, int $siteId, string $chatId): array
     {
         $targetSiteId = self::_getTargetSiteId($siteId, $chatId);
 
@@ -277,10 +285,8 @@ class CraftTool implements ToolTypeInterface
         /** @var Entry[] */
         return Entry::find()
             ->sectionId($targetSectionId)
-            ->editable()
             ->status(null)
             ->siteId($targetSiteId)
-            ->limit($limit ?: 100)
             ->with(['author'])
             ->orderBy(['dateCreated' => SORT_DESC])
             ->all();
