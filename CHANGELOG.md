@@ -1,6 +1,6 @@
 # Release Notes for Telegram Bridge plugin
 
-## Unreleased
+## 0.1.1 - 2024-02-17
 
 - Fixed a bug where the Recent Entries tool failed to return the expected results.
 
