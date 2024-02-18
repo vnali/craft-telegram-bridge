@@ -403,14 +403,14 @@ class DefaultController extends Controller
                 $messageText = $this->chatId;
                 $data = $this->actionPrepareData($messageText, $this->chatId, $replyMarkup);
             }
-        } elseif (($this->updateText == Craft::t('telegram-bridge', 'Tools', [], $this->language) . ' 📋')) {
+        } elseif (($this->updateText == 'Tools 📋')) {
             if (isset($this->chatIdUsers[$this->chatId]) && General::canAccessTools($this->chatIdUsers[$this->chatId])) {
                 $this->clearCaches();
                 $cache->set('current_menu_' . $this->chatId, 'tools', 0, new TagDependency(['tags' => ['telegram-bridge', 'telegram-bridge-' . $this->chatId]]));
                 $data = $this->createResponse('tool category', 'inline_keyboard');
                 $cache->set('next_message_type_' . $this->chatId, 'tool_category', 0, new TagDependency(['tags' => ['telegram-bridge', 'telegram-bridge-' . $this->chatId]]));
             }
-        } elseif (($this->updateText == Craft::t('telegram-bridge', 'Queries', [], $this->language) . '❓')) {
+        } elseif (($this->updateText == 'Queries❓')) {
             $this->clearCaches();
             $cache->set('current_menu_' . $this->chatId, 'queries', 0, new TagDependency(['tags' => ['telegram-bridge', 'telegram-bridge-' . $this->chatId]]));
             $data = $this->createResponse('queries', 'inline_keyboard');
@@ -434,7 +434,7 @@ class DefaultController extends Controller
                 throw new ServerErrorHttpException("Error Processing Request");
             }
             // If there is a previous step and user want go to that step
-            if ($cache->get('previous_criteria_step_' . $this->chatId) && ($this->updateText == '⬅️ ' . Craft::t('telegram-bridge', 'Previous Step', [], $this->language))) {
+            if ($cache->get('previous_criteria_step_' . $this->chatId) && ($this->updateText == 'Previous Step')) {
                 foreach ($steps as $stepKey => $stepItem) {
                     if ($step == $stepKey) {
                         // break, we get to the current step
@@ -458,7 +458,7 @@ class DefaultController extends Controller
                     $update = [];
                 }
                 // this is multiple step, if next step is not requested and * is not selected for site step
-                if (($this->updateText != (Craft::t('telegram-bridge', 'Next Step', [], $this->language) . ' ➡️')) && ($step != 'site' || $this->updateText != '*')) {
+                if ($this->updateText != 'Next Step' && ($step != 'site' || $this->updateText != '*')) {
                     // check if step has validation
                     if (isset($steps[$step]['validation'])) {
                         list($validate, $error) = call_user_func($steps[$step]['validation'], $this->updateText, $this->chatId);
@@ -489,7 +489,7 @@ class DefaultController extends Controller
                 }
             } else {
                 // This step is not a multiple.
-                $this->updateText = ($this->updateText != Craft::t('telegram-bridge', 'Next Step', [], $this->language) . ' ➡️') ? $this->updateText : '';
+                $this->updateText = ($this->updateText != 'Next Step') ? $this->updateText : '';
                 if ($this->updateText && isset($steps[$step]['validation'])) {
                     list($validate, $error) = call_user_func($steps[$step]['validation'], $this->updateText, $this->chatId);
                 }
@@ -529,18 +529,22 @@ class DefaultController extends Controller
                 }
             }
         } elseif ($cache->get('next_message_type_' . $this->chatId) == 'tool') {
-            if ($this->updateText != Craft::t('telegram-bridge', 'Change Criteria', [], $this->language) . ' 🔎' && $this->updateText != Craft::t('telegram-bridge', 'Next Results', [], $this->language) . ' ⏭️' && $this->updateText != '⏮️ ' . Craft::t('telegram-bridge', 'Previous Results', [], $this->language)) {
+            if ($this->updateText != 'Change Criteria' && $this->updateText != 'Next Results' && $this->updateText != 'Previous Results') {
                 // Delete previous tool steps, if there is any
                 $this->deleteSteps();
 
+                $toolValidate = true;
                 $data = null;
                 $toolCategory = $cache->get('tool_category_' . $this->chatId);
                 if (in_array($this->updateText, array_keys($toolCategory::tools($this->language)))) {
                     // User selected a tool, process the tool criteria
                     $cache->set('tool_' . $this->chatId, $this->updateText, 0, new TagDependency(['tags' => ['telegram-bridge', 'telegram-bridge-' . $this->chatId]]));
                     $data = $this->stepProcess();
+                } else {
+                    $toolValidate = false;
                 }
-            } elseif ($this->updateText == Craft::t('telegram-bridge', 'Change Criteria', [], $this->language) . ' 🔎') {
+            } elseif ($this->updateText == 'Change Criteria') {
+                $toolValidate = true;
                 // get tool criteria steps, delete the related cache
                 $steps = $this->toolCriteriaSteps();
                 foreach ($steps as $stepKey => $step) {
@@ -550,22 +554,19 @@ class DefaultController extends Controller
                 $cache->delete('criteria_step_' . $this->chatId);
                 $data = $this->stepProcess();
             } else {
+                $toolValidate = true;
                 // Next results or previous results are requested
                 $data = $this->stepProcess();
             }
-            if (!$data) {
-                //$data = $this->createResponse('tools', $this->defaultChatKeyboard);
+            if (!$data && $toolValidate) {
                 if ($cache->get('tool_' . $this->chatId)) {
                     $replyMarkup = null;
-                    //if (isset($data['reply_markup'])) {
-                    //$replyMarkup = json_decode($data['reply_markup'], true);
-                    //}
                     $data = $this->toolRender($replyMarkup);
                     $cache->set('next_message_type_' . $this->chatId, 'tool', 0, new TagDependency(['tags' => ['telegram-bridge', 'telegram-bridge-' . $this->chatId]]));
                 }
             }
         } elseif ($cache->get('next_message_type_' . $this->chatId) == 'query_type') {
-            if ($this->updateText != Craft::t('telegram-bridge', 'Change Criteria', [], $this->language) . ' 🔎' && $this->updateText != Craft::t('telegram-bridge', 'Next Results', [], $this->language) . ' ⏭️' && $this->updateText != '⏮️ ' . Craft::t('telegram-bridge', 'Previous Results', [], $this->language)) {
+            if ($this->updateText != 'Change Criteria' && $this->updateText != 'Next Results' && $this->updateText != 'Previous Results') {
                 $validEntry = false;
                 if (is_numeric($this->updateText)) {
                     $entry = Entry::find()->id($this->updateText)->one();
@@ -605,7 +606,7 @@ class DefaultController extends Controller
                         }
                     }
                 }
-            } elseif ($this->updateText == Craft::t('telegram-bridge', 'Change Criteria', [], $this->language) . ' 🔎') {
+            } elseif ($this->updateText == 'Change Criteria') {
                 $validEntry = true;
                 $currentMenu = $cache->get('current_menu_' . $this->chatId);
                 if ($currentMenu == 'queries') {
@@ -704,7 +705,7 @@ class DefaultController extends Controller
         if (is_array($steps) && $this->stepCounter != 1 && $cache->get('previous_criteria_step_' . $this->chatId)) {
             $item = [];
             $item['text'] = '⬅️ ' . Craft::t('telegram-bridge', 'Previous Step', [], $this->language);
-            $item['callback_data'] = '⬅️ ' . Craft::t('telegram-bridge', 'Previous Step', [], $this->language);
+            $item['callback_data'] = 'Previous Step';
             $item['item_per_row'] = 2;
             $item['new_row_before'] = true;
             array_push($items, $item);
@@ -714,7 +715,7 @@ class DefaultController extends Controller
         if ($cache->get('criteria_step_' . $this->chatId) && ($nullable || (is_array($steps) && isset($steps[$step]['multiple']) && $steps[$step]['multiple']))) {
             $item = [];
             $item['text'] = Craft::t('telegram-bridge', 'Next Step', [], $this->language) . ' ➡️';
-            $item['callback_data'] = Craft::t('telegram-bridge', 'Next Step', [], $this->language) . ' ➡️';
+            $item['callback_data'] = 'Next Step';
             $item['item_per_row'] = 2;
             $item['new_row_after'] = true;
             if (!$previous) {
@@ -858,14 +859,14 @@ class DefaultController extends Controller
             if (isset($this->chatIdUsers[$this->chatId]) && General::canAccessTools($this->chatIdUsers[$this->chatId])) {
                 $item = [];
                 $item['text'] = Craft::t('telegram-bridge', 'Tools', [], $this->language) . ' 📋';
-                $item['callback_data'] = Craft::t('telegram-bridge', 'Tools', [], $this->language) . ' 📋';
+                $item['callback_data'] = 'Tools 📋';
                 $item['item_per_row'] = 2;
                 array_push($items, $item);
             }
             if ((Craft::$app->getEdition() === Craft::Pro) && (App::parseEnv('$GRAPHQL_API') && (App::parseEnv('$GRAPHQL_API') != '$GRAPHQL_API')) && $this->gqlAccessToken) {
                 $item = [];
                 $item['text'] = Craft::t('telegram-bridge', 'Queries', [], $this->language) . '❓';
-                $item['callback_data'] = Craft::t('telegram-bridge', 'Queries', [], $this->language) . '❓';
+                $item['callback_data'] = 'Queries❓';
                 $item['item_per_row'] = 2;
                 array_push($items, $item);
             }
@@ -911,7 +912,7 @@ class DefaultController extends Controller
                 if ($cache->get('tool_' . $this->chatId)) {
                     $item = [];
                     $item['text'] = Craft::t('telegram-bridge', 'Change Criteria', [], $this->language) . ' 🔎';
-                    $item['callback_data'] = Craft::t('telegram-bridge', 'Change Criteria', [], $this->language) . ' 🔎';
+                    $item['callback_data'] = 'Change Criteria';
                     $item['new_row_before'] = true;
                     array_push($items, $item);
                 }
@@ -930,27 +931,27 @@ class DefaultController extends Controller
                 return null;
             }
             $items = [];
-            if ($cache->get('query_type_' . $this->chatId) && $this->updateText != (Craft::t('telegram-bridge', 'Queries', [], $this->language) . '❓')) {
+            if ($cache->get('query_type_' . $this->chatId) && $this->updateText != 'Queries❓') {
                 if (in_array('offset', array_keys($steps))) {
                     $offset = (int)$cache->get('offset_' . $this->chatId);
                     $limit = (int)$cache->get('limit_' . $this->chatId);
-                    if ($this->updateText == Craft::t('telegram-bridge', 'Next Results', [], $this->language) . ' ⏭️') {
+                    if ($this->updateText == 'Next Results') {
                         $offset = $offset + $limit;
                     }
-                    if ($this->updateText == '⏮️ ' . Craft::t('telegram-bridge', 'Previous Results', [], $this->language)) {
+                    if ($this->updateText == 'Previous Results') {
                         $offset = $offset - $limit;
                     }
                     if ($offset) {
                         $item = [];
                         $item['text'] = '⏮️ ' . Craft::t('telegram-bridge', 'Previous Results', [], $this->language);
-                        $item['callback_data'] = '⏮️ ' . Craft::t('telegram-bridge', 'Previous Results', [], $this->language);
+                        $item['callback_data'] = 'Previous Results';
                         $item['item_per_row'] = 2;
                         array_push($items, $item);
                     }
                     if ($cache->get('gql_result_' . $this->chatId)) {
                         $item = [];
                         $item['text'] = Craft::t('telegram-bridge', 'Next Results', [], $this->language) . ' ⏭️';
-                        $item['callback_data'] = Craft::t('telegram-bridge', 'Next Results', [], $this->language) . ' ⏭️';
+                        $item['callback_data'] = 'Next Results';
                         $item['item_per_row'] = 2;
                         $item['new_row_after'] = true;
                         array_push($items, $item);
@@ -959,11 +960,11 @@ class DefaultController extends Controller
 
                 $item = [];
                 $item['text'] = Craft::t('telegram-bridge', 'Change Criteria', [], $this->language) . ' 🔎';
-                $item['callback_data'] = Craft::t('telegram-bridge', 'Change Criteria', [], $this->language) . ' 🔎';
+                $item['callback_data'] = 'Change Criteria';
                 $item['item_per_row'] = 1;
                 array_push($items, $item);
             }
-            if ($this->updateText == (Craft::t('telegram-bridge', 'Queries', [], $this->language) . '❓') || $cache->get('descendantOf_' . $this->chatId)) {
+            if ($this->updateText == 'Queries❓' || $cache->get('descendantOf_' . $this->chatId)) {
                 $queryItems = $this->gqlQueries();
                 $items = array_merge($items, $queryItems);
             }
@@ -1307,10 +1308,10 @@ class DefaultController extends Controller
             $offset = (int)$cache->get('offset_' . $this->chatId);
             $limit = (int)$cache->get('limit_' . $this->chatId);
 
-            if ($this->updateText == Craft::t('telegram-bridge', 'Next Results', [], $this->language) . ' ⏭️') {
+            if ($this->updateText == 'Next Results') {
                 $offset = $offset + $limit;
             }
-            if ($this->updateText == '⏮️ ' . Craft::t('telegram-bridge', 'Previous Results', [], $this->language)) {
+            if ($this->updateText == 'Previous Results') {
                 $offset = $offset - $limit;
             }
 
