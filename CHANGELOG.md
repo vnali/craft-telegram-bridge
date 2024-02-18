@@ -1,6 +1,6 @@
 # Release Notes for Telegram Bridge plugin
 
-## Unreleased
+## 0.1.2 - 2024-02-18
 
 - Fixed a bug where using old buttons resulted in unexpected behavior.
 
