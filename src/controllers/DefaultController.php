@@ -529,7 +529,7 @@ class DefaultController extends Controller
                 }
             }
         } elseif ($cache->get('next_message_type_' . $this->chatId) == 'tool') {
-            if ($this->updateText != 'Change Criteria' && $this->updateText != 'Next Results' && $this->updateText != 'Previous Results') {
+            if ($this->updateText != 'Change Criteria') {
                 // Delete previous tool steps, if there is any
                 $this->deleteSteps();
 
@@ -543,7 +543,7 @@ class DefaultController extends Controller
                 } else {
                     $toolValidate = false;
                 }
-            } elseif ($this->updateText == 'Change Criteria') {
+            } else {
                 $toolValidate = true;
                 // get tool criteria steps, delete the related cache
                 $steps = $this->toolCriteriaSteps();
@@ -552,10 +552,6 @@ class DefaultController extends Controller
                 }
                 $cache->delete('previous_criteria_step_' . $this->chatId);
                 $cache->delete('criteria_step_' . $this->chatId);
-                $data = $this->stepProcess();
-            } else {
-                $toolValidate = true;
-                // Next results or previous results are requested
                 $data = $this->stepProcess();
             }
             if (!$data && $toolValidate) {
