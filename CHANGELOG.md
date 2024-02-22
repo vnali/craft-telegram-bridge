@@ -1,8 +1,17 @@
 # Release Notes for Telegram Bridge plugin
 
+## Unreleased
+
+- The 'not' and 'all' button in GQL queries chats are now only shown when there are at least two items.
+- Pressing 'all' button in GQL queries chats now advances chats to the next step when it is appropriate.
+- Fixed a bug where executing GQL queries without variables failed to return the expected results.
+- Fixed a bug in executing GQL queries where static arguments values for section, sectionId, volume and volumeId were ignored for suggesting type, typeId and folderId buttons.
+- Fixed a bug in executing GQL queries where static argument value for the limit was ignored when calculating the offset.
+- Fixed a bug where suggested entry types for multiple selected sections were incorrect in GQL chats.
+
 ## 0.1.2 - 2024-02-18
 
-- Fixed a bug where using old buttons resulted in unexpected behavior.
+- Fixed a bug where using old keyboard buttons in chat resulted in unexpected behavior.
 
 ## 0.1.1 - 2024-02-17
 

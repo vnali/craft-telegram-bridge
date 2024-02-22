@@ -457,8 +457,8 @@ class DefaultController extends Controller
                 if (!$update) {
                     $update = [];
                 }
-                // this is multiple step, if next step is not requested and * is not selected for site step
-                if ($this->updateText != 'Next Step' && ($step != 'site' || $this->updateText != '*')) {
+                // this is multiple step, if next step and * is not requested
+                if ($this->updateText != 'Next Step' && (($step != 'site' && $step != 'siteId' && $step != 'section' && $step != 'volume' && $step != 'type') || $this->updateText != '*')) {
                     // check if step has validation
                     if (isset($steps[$step]['validation'])) {
                         list($validate, $error) = call_user_func($steps[$step]['validation'], $this->updateText, $this->chatId);
@@ -483,7 +483,9 @@ class DefaultController extends Controller
                     }
                 } else {
                     // We should go to next step
-                    // TODO: check what happen with * as site
+                    if ($this->updateText != 'Next Step') {
+                        $update = '*';
+                    }
                     $cache->set($step . '_' . $this->chatId, $update, 0, new TagDependency(['tags' => ['telegram-bridge', 'telegram-bridge-' . $this->chatId]]));
                     $data = $this->stepProcess();
                 }
@@ -596,6 +598,12 @@ class DefaultController extends Controller
                                         // User selected a query, process the query criteria
                                         $cache->set('query_type_' . $this->chatId, $this->updateText, 0, new TagDependency(['tags' => ['telegram-bridge', 'telegram-bridge-' . $this->chatId]]));
                                         $data = $this->stepProcess();
+                                        if (!$data) {
+                                            // it doesn't have any steps, show the result
+                                            $cache->set('gql_result_' . $this->chatId, true, 0, new TagDependency(['tags' => ['telegram-bridge', 'telegram-bridge-' . $this->chatId]]));
+                                            $data = $this->createResponse('queries', 'inline_keyboard');
+                                            $data = $this->actionGqlQueryRender(json_decode($data['reply_markup'], true));
+                                        }
                                     }
                                 }
                             }
@@ -931,6 +939,13 @@ class DefaultController extends Controller
                 if (in_array('offset', array_keys($steps))) {
                     $offset = (int)$cache->get('offset_' . $this->chatId);
                     $limit = (int)$cache->get('limit_' . $this->chatId);
+                    // check if limit is a variable or passed with fixed value
+                    if (!$limit) {
+                        $args = $cache->get('args_' . $this->updateText);
+                        if (isset($args['limit'])) {
+                            $limit = (int)$args['limit'];
+                        }
+                    }
                     if ($this->updateText == 'Next Results') {
                         $offset = $offset + $limit;
                     }
@@ -969,22 +984,33 @@ class DefaultController extends Controller
             $token = Craft::$app->gql->getTokenByAccessToken($this->gqlAccessToken);
             $pairs = GqlHelper::extractAllowedEntitiesFromSchema('read', $token->getSchema());
             $items = [];
+            $itemsCount = 0;
             if (isset($pairs['sections']) && $pairs['sections']) {
                 // only show sections that user can read
                 foreach ($sections as $section) {
                     if (in_array($section->uid, $pairs['sections'])) {
+                        $itemsCount++;
                         $item = [];
                         $item['text'] = $section->name;
                         $item['callback_data'] = ($step == 'section') ? $section->handle : $section->id;
                         array_push($items, $item);
                     }
                 }
-                // allow to select not
-                $item = [];
-                $item['text'] = 'not';
-                $item['callback_data'] = 'not';
-                $item['new_row_before'] = true;
-                array_push($items, $item);
+                // allow to select not or all
+                if ($itemsCount > 1) {
+                    $item = [];
+                    $item['text'] = 'not';
+                    $item['callback_data'] = 'not';
+                    $item['new_row_before'] = true;
+                    array_push($items, $item);
+                    if ($step == 'section') {
+                        $item = [];
+                        $item['text'] = 'all';
+                        $item['callback_data'] = '*';
+                        $item['new_row_before'] = true;
+                        array_push($items, $item);
+                    }
+                }
             }
         } elseif ($cache->get('current_menu_' . $this->chatId) == 'queries' && ($step == 'type' || $step == 'typeId')) {
             $token = Craft::$app->gql->getTokenByAccessToken($this->gqlAccessToken);
@@ -998,14 +1024,33 @@ class DefaultController extends Controller
                 }
             }
             $selectedSectionHandles = $cache->get('section_' . $this->chatId);
+            if (!$selectedSectionHandles) {
+                $args = $cache->get('args_' . $queryType);
+                if (isset($args['section'])) {
+                    $selectedSectionHandles = $args['section'];
+                    if (is_string($selectedSectionHandles)) {
+                        $selectedSectionHandles = [$selectedSectionHandles];
+                    }
+                }
+            }
             $selectedSectionIds = $cache->get('sectionId_' . $this->chatId);
-
-            if ($selectedSectionHandles) {
+            if (!$selectedSectionIds) {
+                $args = $cache->get('args_' . $queryType);
+                if (isset($args['sectionId'])) {
+                    $selectedSectionIds = $args['sectionId'];
+                    if (is_string($selectedSectionIds)) {
+                        $selectedSectionIds = [$selectedSectionIds];
+                    }
+                }
+            }
+            if ($selectedSectionHandles && $selectedSectionHandles != '*') {
                 $sectionIds = [];
                 foreach ($selectedSectionHandles as $sec) {
                     if ($sec != 'not') {
                         $sectionByHandle = Craft::$app->sections->getSectionByHandle($sec);
-                        $sectionIds[] = $sectionByHandle->id;
+                        if ($sectionByHandle) {
+                            $sectionIds[] = $sectionByHandle->id;
+                        }
                     }
                 }
                 // filter allowed sections based on allowed section ids and if user selected not
@@ -1024,36 +1069,50 @@ class DefaultController extends Controller
             $entryTypes = [];
             if ($allowedSectionIds) {
                 foreach ($allowedSectionIds as $allowedSectionId) {
-                    $entryTypes = Craft::$app->sections->getEntryTypesBySectionId($allowedSectionId);
+                    $entryTypes[] = Craft::$app->sections->getEntryTypesBySectionId($allowedSectionId);
                 }
             }
+            $entryTypes = array_merge(...$entryTypes);
             $token = Craft::$app->gql->getTokenByAccessToken($this->gqlAccessToken);
             // TODO: Craft 5 does not have entry types in schema
             $pairs = GqlHelper::extractAllowedEntitiesFromSchema('read', $token->getSchema());
+            $itemsCount = 0;
             $items = [];
             if (isset($pairs['entrytypes']) && $pairs['entrytypes']) {
                 foreach ($entryTypes as $entryType) {
                     if (in_array($entryType->uid, $pairs['entrytypes'])) {
+                        $itemsCount++;
                         $item = [];
                         $item['text'] = $entryType->getSection()->name . ' - ' . $entryType->name;
                         $item['callback_data'] = ($step == 'type') ? $entryType->handle : $entryType->id;
                         array_push($items, $item);
                     }
                 }
-                $item = [];
-                $item['text'] = 'not';
-                $item['callback_data'] = 'not';
-                $item['new_row_before'] = true;
-                array_push($items, $item);
+                if ($itemsCount > 1) {
+                    $item = [];
+                    $item['text'] = 'not';
+                    $item['callback_data'] = 'not';
+                    $item['new_row_before'] = true;
+                    array_push($items, $item);
+                    if ($step == 'type') {
+                        $item = [];
+                        $item['text'] = 'all';
+                        $item['callback_data'] = '*';
+                        $item['new_row_before'] = true;
+                        array_push($items, $item);
+                    }
+                }
             }
         } elseif ($cache->get('current_menu_' . $this->chatId) == 'queries' && ($step == 'site' || $step == 'siteId')) {
             $sites = Craft::$app->sites->getAllSites();
             $token = Craft::$app->gql->getTokenByAccessToken($this->gqlAccessToken);
             $pairs = GqlHelper::extractAllowedEntitiesFromSchema('read', $token->getSchema());
             $items = [];
+            $itemsCount = 0;
             if (isset($pairs['sites'])) {
                 foreach ($sites as $site) {
                     if (in_array($site->uid, $pairs['sites'])) {
+                        $itemsCount++;
                         $item = [];
                         $item['text'] = $site->name;
                         $item['callback_data'] = ($step == 'site') ? $site->name : $site->id;
@@ -1061,36 +1120,48 @@ class DefaultController extends Controller
                     }
                 }
             }
-            $item = [];
-            $item['text'] = 'not';
-            $item['callback_data'] = 'not';
-            $item['new_row_before'] = true;
-            array_push($items, $item);
-            $item = [];
-            $item['text'] = craft::t('app', 'All', [], $this->language);
-            $item['callback_data'] = '*';
-            $item['new_row_before'] = true;
-            array_push($items, $item);
+            if ($itemsCount > 1) {
+                $item = [];
+                $item['text'] = 'not';
+                $item['callback_data'] = 'not';
+                $item['new_row_before'] = true;
+                array_push($items, $item);
+                $item = [];
+                $item['text'] = craft::t('app', 'All', [], $this->language);
+                $item['callback_data'] = '*';
+                $item['new_row_before'] = true;
+                array_push($items, $item);
+            }
         } elseif ($cache->get('current_menu_' . $this->chatId) == 'queries' && ($step == 'volumeId' || $step == 'volume')) {
             $volumes = Craft::$app->volumes->getAllVolumes();
             $token = Craft::$app->gql->getTokenByAccessToken($this->gqlAccessToken);
             $pairs = GqlHelper::extractAllowedEntitiesFromSchema('read', $token->getSchema());
             $items = [];
+            $itemsCount = 0;
             if (isset($pairs['volumes'])) {
                 foreach ($volumes as $volume) {
                     if (in_array($volume->uid, $pairs['volumes'])) {
-                        echo $volume->name;
+                        $itemsCount++;
                         $item = [];
                         $item['text'] = $volume->name;
                         $item['callback_data'] = ($step == 'volumeId') ? $volume->id : $volume->handle;
                         array_push($items, $item);
                     }
                 }
-                $item = [];
-                $item['text'] = 'not';
-                $item['callback_data'] = 'not';
-                $item['new_row_before'] = true;
-                array_push($items, $item);
+                if ($itemsCount > 1) {
+                    $item = [];
+                    $item['text'] = 'not';
+                    $item['callback_data'] = 'not';
+                    $item['new_row_before'] = true;
+                    array_push($items, $item);
+                    if ($step == 'volume') {
+                        $item = [];
+                        $item['text'] = 'all';
+                        $item['callback_data'] = '*';
+                        $item['new_row_before'] = true;
+                        array_push($items, $item);
+                    }
+                }
             }
         } elseif ($cache->get('current_menu_' . $this->chatId) == 'queries' && ($step == 'folderId')) {
             $token = Craft::$app->gql->getTokenByAccessToken($this->gqlAccessToken);
@@ -1103,15 +1174,36 @@ class DefaultController extends Controller
                     $allowedVolumeIds[] = $volu->id;
                 }
             }
-            $selectedVolumeHandles = $cache->get('volume_' . $this->chatId);
-            $selectedVolumeIds = $cache->get('volumeId_' . $this->chatId);
 
-            if ($selectedVolumeHandles) {
+            $selectedVolumeHandles = $cache->get('volume_' . $this->chatId);
+            if (!$selectedVolumeHandles) {
+                $args = $cache->get('args_' . $queryType);
+                if (isset($args['volume'])) {
+                    $selectedVolumeHandles = $args['volume'];
+                    if (is_string($selectedVolumeHandles)) {
+                        $selectedVolumeHandles = [$selectedVolumeHandles];
+                    }
+                }
+            }
+            $selectedVolumeIds = $cache->get('volumeId_' . $this->chatId);
+            if (!$selectedVolumeIds) {
+                $args = $cache->get('args_' . $queryType);
+                if (isset($args['volumeId'])) {
+                    $selectedVolumeIds = $args['volumeId'];
+                    if (is_string($selectedVolumeIds)) {
+                        $selectedVolumeIds = [$selectedVolumeIds];
+                    }
+                }
+            }
+
+            if ($selectedVolumeHandles && $selectedVolumeHandles != '*') {
                 $volumeIds = [];
                 foreach ($selectedVolumeHandles as $vol) {
                     if ($vol != 'not') {
                         $volumeByHandle = Craft::$app->volumes->getVolumeByHandle($vol);
-                        $volumeIds[] = $volumeByHandle->id;
+                        if ($volumeByHandle) {
+                            $volumeIds[] = $volumeByHandle->id;
+                        }
                     }
                 }
                 // filter allowed volumes based on allowed volume ids and if user selected not
@@ -1128,12 +1220,14 @@ class DefaultController extends Controller
                 }
             }
 
+            $itemsCount = 0;
             $items = [];
             if ($allowedVolumeIds) {
                 foreach ($allowedVolumeIds as $allowedVolumeId) {
                     $vol = Craft::$app->volumes->getVolumeById($allowedVolumeId);
                     $folders = (new Query())->select(['id', 'path', 'name'])->from([Table::VOLUMEFOLDERS])->where(['volumeId' => $allowedVolumeId])->all();
                     foreach ($folders as $folder) {
+                        $itemsCount++;
                         $item = [];
                         $item['text'] = $vol->name . ' - ' . $folder['name'];
                         $item['callback_data'] = $folder['id'];
@@ -1141,11 +1235,18 @@ class DefaultController extends Controller
                     }
                 }
             }
-            $item = [];
-            $item['text'] = 'not';
-            $item['callback_data'] = 'not';
-            $item['new_row_before'] = true;
-            array_push($items, $item);
+            if ($itemsCount > 1) {
+                $item = [];
+                $item['text'] = 'not';
+                $item['callback_data'] = 'not';
+                $item['new_row_before'] = true;
+                array_push($items, $item);
+                $item = [];
+                $item['text'] = 'all';
+                $item['callback_data'] = '*';
+                $item['new_row_before'] = true;
+                array_push($items, $item);
+            }
         } elseif ($step == 'limit') {
             $limits = ['1', '2', '5', '10', '15', '20'];
             $items = [];
@@ -1241,6 +1342,13 @@ class DefaultController extends Controller
             $queryVariables = $parsedQuery->definitions[0]->variableDefinitions;
         }
 
+        $fields = Gql::extractGQLFields($parsedQuery);
+        $args = [];
+        if (isset($fields[0]['arguments'])) {
+            $args = $fields[0]['arguments'];
+        }
+        $cache->set('args_' . $id, $args, 0, new TagDependency(['tags' => ['telegram-bridge', 'telegram-bridge-' . $this->chatId]]));
+
         $steps = [];
         // You can now access and use the query variables as needed
         foreach ($queryVariables as $variableDefinition) {
@@ -1303,7 +1411,12 @@ class DefaultController extends Controller
         if (in_array('offset', array_keys($steps))) {
             $offset = (int)$cache->get('offset_' . $this->chatId);
             $limit = (int)$cache->get('limit_' . $this->chatId);
-
+            if (!$limit) {
+                $args = $cache->get('args_' . $queryType);
+                if (isset($args['limit'])) {
+                    $limit = (int)$args['limit'];
+                }
+            }
             if ($this->updateText == 'Next Results') {
                 $offset = $offset + $limit;
             }
