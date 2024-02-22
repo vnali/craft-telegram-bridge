@@ -1,6 +1,6 @@
 # Release Notes for Telegram Bridge plugin
 
-## Unreleased
+## 0.2.0 - 2024-02-22
 
 - The 'not' and 'all' button in GQL queries chats are now only shown when there are at least two items.
 - Pressing 'all' button in GQL queries chats now advances chats to the next step when it is appropriate.
