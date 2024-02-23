@@ -178,6 +178,7 @@ class CraftTool implements ToolTypeInterface
                     }
                     $section = $entry->getSection();
                     $sectionUid = $section->uid;
+                    // TODO: use setIdentity() and editable() instead
                     if ($user->can('viewPeerEntries:' . $sectionUid) || ($user->can('viewEntries:' . $sectionUid) && ($entry->getAuthorId() == $user->id))) {
                         $tableBuilder->row([$entry->title, $entry->dateCreated->format('Y-m-d H:i'), $entry->getAuthor()->username]);
                         $limitCounter++;
