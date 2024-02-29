@@ -93,37 +93,64 @@ class SettingsController extends Controller
             $warnings[] = 'You should specify X_CRAFT_TELEGRAM_BRIDGE_SECRET_TOKEN environment setting to send events to telegram chats.';
         }
 
-        // Parse supported chat ids, tokens and users
-        $supportedChatIds = explode('||', App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS'));
-        $supportedChatIdsGqlToken = explode('||', App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS_GQL_TOKEN'));
-        $supportedChatIdsUser = explode('||', App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS_USER'));
-
         $enabledGQL = false;
         if (App::parseEnv('$GRAPHQL_API') && (App::parseEnv('$GRAPHQL_API') != '$GRAPHQL_API')) {
             $enabledGQL = true;
         }
+        $currentVersion = craft::$app->getVersion();
+        $versionCompare = version_compare($currentVersion, '4.8.0');
+        $supportedChatIds = [];
+        $supportedChatIdsGqlToken = [];
+        $supportedChatIdsUser = [];
 
         // Push other telegram chat ids and their token to white list if it is allowed
-        if (App::parseEnv('$ALLOW_OTHER_TELEGRAM_CHAT_IDS_GQL') == 'true') {
+        if ((Craft::$app->getEdition() === Craft::Pro || $versionCompare >= 0) && $enabledGQL && App::parseEnv('$ALLOW_OTHER_TELEGRAM_CHAT_IDS_GQL') == 'true') {
             $supportedChatIds[] = 'others';
+            if (!App::parseEnv('$OTHER_TELEGRAM_CHAT_IDS_GQL_TOKEN') || App::parseEnv('$OTHER_TELEGRAM_CHAT_IDS_GQL_TOKEN') == '$OTHER_TELEGRAM_CHAT_IDS_GQL_TOKEN') {
+                $errors[] = 'You should specify OTHER_TELEGRAM_CHAT_IDS_GQL_TOKEN environment setting.';
+            }
             $supportedChatIdsGqlToken[] = App::parseEnv('$OTHER_TELEGRAM_CHAT_IDS_GQL_TOKEN');
             $supportedChatIdsUser[] = null;
+        }
+
+        // Parse supported chat ids, tokens and users
+        $chatIds = explode('||', App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS'));
+        $chatIdsGqlToken = explode('||', App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS_GQL_TOKEN'));
+        $chatIdsUser = explode('||', App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS_USER'));
+
+        if (App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS_USER') && App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS_USER') != '$ALLOWED_TELEGRAM_CHAT_IDS_USER') {
+            if (!App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS') || App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS') == '$ALLOWED_TELEGRAM_CHAT_IDS' || (count($chatIds) != count($chatIdsUser))) {
+                $errors[] = 'The count of $ALLOWED_TELEGRAM_CHAT_IDS and $ALLOWED_TELEGRAM_CHAT_IDS_USER items is not equal.';
+            }
+            foreach ($chatIdsUser as $chatIdUser) {
+                $supportedChatIdsUser[] = $chatIdUser;
+            }
+        }
+
+        // Check if the count of telegram chat ids and their gql tokens is equal
+        if ((Craft::$app->getEdition() === Craft::Pro || $versionCompare >= 0) && $enabledGQL) {
+            if (App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS_GQL_TOKEN') && App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS_GQL_TOKEN') != '$ALLOWED_TELEGRAM_CHAT_IDS_GQL_TOKEN') {
+                if (!App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS') || App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS') == '$ALLOWED_TELEGRAM_CHAT_IDS' || (count($chatIds) != count($chatIdsGqlToken))) {
+                    $errors[] = 'The count of $ALLOWED_TELEGRAM_CHAT_IDS and $ALLOWED_TELEGRAM_CHAT_IDS_GQL_TOKEN items is not equal.';
+                }
+                foreach ($chatIdsGqlToken as $chatIdGqlToken) {
+                    $supportedChatIdsGqlToken[] = $chatIdGqlToken;
+                }
+            }
+        }
+
+        foreach ($chatIds as $chatId) {
+            $supportedChatIds[] = $chatId;
         }
 
         // Check format of provided configs
         if ($supportedChatIds[0] == '$ALLOWED_TELEGRAM_CHAT_IDS') {
             // We don't set error because $ALLOWED_TELEGRAM_CHAT_IDS is not necessary when we want to only sent request via craft webhook
             $warnings[] = 'You should specify ALLOWED_TELEGRAM_CHAT_IDS environment setting to allow chats to interact with the plugin.';
-        } elseif (Craft::$app->getEdition() === Craft::Pro && $enabledGQL && count($supportedChatIds) != count($supportedChatIdsGqlToken)) {
-            // Check if count of telegram chat ids and their gql tokens are equal
-            $errors[] = 'The count of supported chat ids and GQL tokens is not equal.';
-        } else {
-            // Check if count of telegram chat ids and their users are equal
-            if (count($supportedChatIds) != count($supportedChatIdsUser)) {
-                $errors[] = 'The count of supported chat ids and users is not equal.';
-            } else {
-                foreach ($supportedChatIds as $key => $supportedChatId) {
-                    if (Craft::$app->getEdition() === Craft::Pro && $enabledGQL) {
+        } elseif (!$errors) {
+            foreach ($supportedChatIds as $key => $supportedChatId) {
+                if ((Craft::$app->getEdition() === Craft::Pro || $versionCompare >= 0) && $enabledGQL) {
+                    if (isset($supportedChatIdsGqlToken[$key])) {
                         $tokenParts = explode('-', $supportedChatIdsGqlToken[$key], 2);
                         if (!$tokenParts[0] || $tokenParts[0] == '$ALLOWED_TELEGRAM_CHAT_IDS_GQL_TOKEN' || $tokenParts[0] == '$OTHER_TELEGRAM_CHAT_IDS_GQL_TOKEN' || is_numeric($tokenParts[0]) || $tokenParts[0] == 'public') {
                             if ($tokenParts[0] == 'public') {
@@ -147,6 +174,8 @@ class SettingsController extends Controller
                             $errors[] = 'The format of provided supported GQL token is not valid: ' . $tokenParts[0];
                         }
                     }
+                }
+                if (isset($supportedChatIdsUser[$key])) {
                     $userParts = explode('-', $supportedChatIdsUser[$key], 2);
                     if ((is_numeric($userParts[0]) && isset($userParts[1])) || !$userParts[0] || $userParts[0] == '$ALLOWED_TELEGRAM_CHAT_IDS_USER') {
                         if (is_numeric($userParts[0]) && isset($userParts[1])) {
@@ -173,20 +202,22 @@ class SettingsController extends Controller
             }
         }
 
-        if (!App::parseEnv('$GRAPHQL_API') || (App::parseEnv('$GRAPHQL_API') == '$GRAPHQL_API')) {
-            $warnings[] = 'You should specify GRAPHQL_API environment setting to execute GQL queries.';
-        } else {
-            if (!App::parseEnv('$GRAPHQL_QUERY_SECTIONS') || (App::parseEnv('$GRAPHQL_QUERY_SECTIONS') == '$GRAPHQL_QUERY_SECTIONS')) {
-                $warnings[] = 'You should specify GRAPHQL_QUERY_SECTIONS environment setting to execute GQL queries.';
-            }
-            if (!App::parseEnv('$GRAPHQL_QUERY_FIELD') || (App::parseEnv('$GRAPHQL_QUERY_FIELD') == '$GRAPHQL_QUERY_FIELD')) {
-                $warnings[] = 'You should specify GRAPHQL_QUERY_FIELD environment setting to execute GQL queries.';
+        if ((Craft::$app->getEdition() === Craft::Pro || $versionCompare >= 0)) {
+            if (!App::parseEnv('$GRAPHQL_API') || (App::parseEnv('$GRAPHQL_API') == '$GRAPHQL_API')) {
+                $warnings[] = 'You should specify GRAPHQL_API environment setting to execute GQL queries.';
+            } else {
+                if (!App::parseEnv('$GRAPHQL_QUERY_SECTIONS') || (App::parseEnv('$GRAPHQL_QUERY_SECTIONS') == '$GRAPHQL_QUERY_SECTIONS')) {
+                    $warnings[] = 'You should specify GRAPHQL_QUERY_SECTIONS environment setting to execute GQL queries.';
+                }
+                if (!App::parseEnv('$GRAPHQL_QUERY_FIELD') || (App::parseEnv('$GRAPHQL_QUERY_FIELD') == '$GRAPHQL_QUERY_FIELD')) {
+                    $warnings[] = 'You should specify GRAPHQL_QUERY_FIELD environment setting to execute GQL queries.';
+                }
             }
         }
 
         // Only show access table if there is no error and $ALLOWED_TELEGRAM_CHAT_IDS is set and $SHOW_CHAT_ID_TABLE set to true
         $accessTable = null;
-        if (!$errors && $supportedChatIds[0] != '$ALLOWED_TELEGRAM_CHAT_IDS' && App::parseEnv('$SHOW_CHAT_ID_TABLE') == 'true') {
+        if (!$errors && App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS') != '$ALLOWED_TELEGRAM_CHAT_IDS' && App::parseEnv('$SHOW_CHAT_ID_TABLE') == 'true') {
             $tableBuilder = new \MaddHatter\MarkdownTable\Builder();
             $tableBuilder->headers([Craft::t('telegram-bridge', 'Chat ID'), Craft::t('telegram-bridge', 'User'), Craft::t('telegram-bridge', 'GQL Token')])->align(['L', 'L', 'L']); // set column alignment
             foreach ($supportedChatIds as $key => $supportedChatId) {

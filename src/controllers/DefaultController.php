@@ -76,81 +76,110 @@ class DefaultController extends Controller
                 throw new ServerErrorHttpException('You should specify TELEGRAM_BOT_TOKEN environment setting.');
             }
 
-            $supportedChatIds = explode('||', App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS'));
-            $supportedChatIdsGqlToken = explode('||', App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS_GQL_TOKEN'));
-            $supportedChatIdsUser = explode('||', App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS_USER'));
-
-            // Push non mentioned telegram chat ids and their token to whitelist if it is allowed
-            if (App::parseEnv('$ALLOW_OTHER_TELEGRAM_CHAT_IDS_GQL') == 'true') {
-                $supportedChatIds[] = 'others';
-                $supportedChatIdsGqlToken[] = App::parseEnv('$OTHER_TELEGRAM_CHAT_IDS_GQL_TOKEN');
-                $supportedChatIdsUser[] = null;
-            }
-
             $enabledGQL = false;
             if (App::parseEnv('$GRAPHQL_API') && (App::parseEnv('$GRAPHQL_API') != '$GRAPHQL_API')) {
                 $enabledGQL = true;
             }
+            $currentVersion = craft::$app->getVersion();
+            $versionCompare = version_compare($currentVersion, '4.8.0');
 
-            // Check if the count of telegram chat ids and their gql tokens is equal
-            if (Craft::$app->getEdition() === Craft::Pro && $enabledGQL && count($supportedChatIds) != count($supportedChatIdsGqlToken)) {
-                throw new ServerErrorHttpException('The count of $ALLOWED_TELEGRAM_CHAT_IDS and $ALLOWED_TELEGRAM_CHAT_IDS_GQL_TOKEN items is not equal.');
+            $supportedChatIds = [];
+            $supportedChatIdsGqlToken = [];
+            $supportedChatIdsUser = [];
+
+            // Push non mentioned telegram chat ids and their token to whitelist if it is allowed
+            if ((Craft::$app->getEdition() === Craft::Pro || $versionCompare >= 0) && $enabledGQL && App::parseEnv('$ALLOW_OTHER_TELEGRAM_CHAT_IDS_GQL') == 'true') {
+                $supportedChatIds[] = 'others';
+                if (!App::parseEnv('$OTHER_TELEGRAM_CHAT_IDS_GQL_TOKEN') || App::parseEnv('$OTHER_TELEGRAM_CHAT_IDS_GQL_TOKEN') == '$OTHER_TELEGRAM_CHAT_IDS_GQL_TOKEN') {
+                    throw new ServerErrorHttpException('You should specify OTHER_TELEGRAM_CHAT_IDS_GQL_TOKEN environment setting.');
+                }
+                $supportedChatIdsGqlToken[] = App::parseEnv('$OTHER_TELEGRAM_CHAT_IDS_GQL_TOKEN');
+                $supportedChatIdsUser[] = null;
             }
 
-            // Check if the count of telegram chat ids and their users is equal
-            if (count($supportedChatIds) != count($supportedChatIdsUser)) {
-                throw new ServerErrorHttpException('The count of $ALLOWED_TELEGRAM_CHAT_IDS and $ALLOWED_TELEGRAM_CHAT_IDS_USER items is not equal.');
+            // Parse supported chat ids, tokens and users
+            $chatIds = explode('||', App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS'));
+            $chatIdsGqlToken = explode('||', App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS_GQL_TOKEN'));
+            $chatIdsUser = explode('||', App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS_USER'));
+
+            if (App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS_USER') && App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS_USER') != '$ALLOWED_TELEGRAM_CHAT_IDS_USER') {
+                if (!App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS') || App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS') == '$ALLOWED_TELEGRAM_CHAT_IDS' || (count($chatIds) != count($chatIdsUser))) {
+                    throw new ServerErrorHttpException('The count of $ALLOWED_TELEGRAM_CHAT_IDS and $ALLOWED_TELEGRAM_CHAT_IDS_USER items is not equal.');
+                }
+                foreach ($chatIdsUser as $chatIdUser) {
+                    $supportedChatIdsUser[] = $chatIdUser;
+                }
+            }
+
+            // Check if the count of telegram chat ids and their gql tokens is equal
+            if ((Craft::$app->getEdition() === Craft::Pro || $versionCompare >= 0) && $enabledGQL) {
+                if (App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS_GQL_TOKEN') && App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS_GQL_TOKEN') != '$ALLOWED_TELEGRAM_CHAT_IDS_GQL_TOKEN') {
+                    if (!App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS') || App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS') == '$ALLOWED_TELEGRAM_CHAT_IDS' || (count($chatIds) != count($chatIdsGqlToken))) {
+                        throw new ServerErrorHttpException('The count of $ALLOWED_TELEGRAM_CHAT_IDS and $ALLOWED_TELEGRAM_CHAT_IDS_GQL_TOKEN items is not equal.');
+                    }
+                    foreach ($chatIdsGqlToken as $chatIdGqlToken) {
+                        $supportedChatIdsGqlToken[] = $chatIdGqlToken;
+                    }
+                }
+            }
+
+            foreach ($chatIds as $chatId) {
+                $supportedChatIds[] = $chatId;
             }
 
             $this->supportedChatIds = $supportedChatIds;
 
             foreach ($supportedChatIds as $key => $supportedChatId) {
-                if (Craft::$app->getEdition() === Craft::Pro && $enabledGQL) {
-                    $tokenParts = explode('-', $supportedChatIdsGqlToken[$key], 2);
-                    // Token can be not set, public or first part should be a number
-                    if (!$tokenParts[0] || $tokenParts[0] == '$ALLOWED_TELEGRAM_CHAT_IDS_GQL_TOKEN' || $tokenParts[0] == '$OTHER_TELEGRAM_CHAT_IDS_GQL_TOKEN' || is_numeric($tokenParts[0]) || $tokenParts[0] == 'public') {
-                        if ($tokenParts[0] == 'public') {
-                            $token = Craft::$app->gql->getPublicToken();
-                            $this->gqlAccessTokens[$supportedChatId] = $token->accessToken;
-                        } elseif (is_numeric($tokenParts[0])) {
-                            $tokenId = (int)$tokenParts[0];
-                            $token = Craft::$app->gql->getTokenById($tokenId);
-                            if (!$token) {
-                                throw new ServerErrorHttpException("The token id $tokenId does not return a token");
+                if ((Craft::$app->getEdition() === Craft::Pro || $versionCompare >= 0) && $enabledGQL) {
+                    if (isset($supportedChatIdsGqlToken[$key])) {
+                        $tokenParts = explode('-', $supportedChatIdsGqlToken[$key], 2);
+                        // Token can be not set, public or first part should be a number
+                        if (!$tokenParts[0] || $tokenParts[0] == '$ALLOWED_TELEGRAM_CHAT_IDS_GQL_TOKEN' || $tokenParts[0] == '$OTHER_TELEGRAM_CHAT_IDS_GQL_TOKEN' || is_numeric($tokenParts[0]) || $tokenParts[0] == 'public') {
+                            if ($tokenParts[0] == 'public') {
+                                $token = Craft::$app->gql->getPublicToken();
+                                $this->gqlAccessTokens[$supportedChatId] = $token->accessToken;
+                            } elseif (is_numeric($tokenParts[0])) {
+                                $tokenId = (int)$tokenParts[0];
+                                $token = Craft::$app->gql->getTokenById($tokenId);
+                                if (!$token) {
+                                    throw new ServerErrorHttpException("The token id $tokenId does not return a token");
+                                }
+                                // Check if provided token id and token name point to same token. we do this to prevent typo mistakes which lead to possible unwanted access
+                                if ($token != Craft::$app->gql->getTokenByName($tokenParts[1])) {
+                                    throw new ServerErrorHttpException("The token id $tokenId and token name $tokenParts[1] does not return same token");
+                                }
+                                $this->gqlAccessTokens[$supportedChatId] = $token->accessToken;
                             }
-                            // Check if provided token id and token name point to same token. we do this to prevent typo mistakes which lead to possible unwanted access
-                            if ($token != Craft::$app->gql->getTokenByName($tokenParts[1])) {
-                                throw new ServerErrorHttpException("The token id $tokenId and token name $tokenParts[1] does not return same token");
-                            }
-                            $this->gqlAccessTokens[$supportedChatId] = $token->accessToken;
+                        } else {
+                            throw new ServerErrorHttpException('The format of provided supported GQL token is not valid: ' . $tokenParts[0]);
                         }
-                    } else {
-                        throw new ServerErrorHttpException('The format of provided supported GQL token is not valid: ' . $tokenParts[0]);
                     }
                 }
-                $userParts = explode('-', $supportedChatIdsUser[$key], 2);
-                // can be in format of userId-email/username or null
-                if ((is_numeric($userParts[0]) && isset($userParts[1])) || !$userParts[0] || $userParts[0] == '$ALLOWED_TELEGRAM_CHAT_IDS_USER') {
-                    if (is_numeric($userParts[0]) && isset($userParts[1])) {
-                        $userId = (int)$userParts[0];
-                        // Check if provided user id and user email point to the same user. we do this to prevent typo mistakes which lead to possible unwanted access
-                        $userById = Craft::$app->users->getUserById($userId);
-                        $userByUsernameOrEmail = Craft::$app->users->getUserByUsernameOrEmail($userParts[1]);
-                        if (!$userById) {
-                            throw new ServerErrorHttpException("The user id $userId does not return a user");
+                if (isset($supportedChatIdsUser[$key])) {
+                    $userParts = explode('-', $supportedChatIdsUser[$key], 2);
+                    // can be in format of userId-email/username or null
+                    if ((is_numeric($userParts[0]) && isset($userParts[1])) || !$userParts[0] || $userParts[0] == '$ALLOWED_TELEGRAM_CHAT_IDS_USER') {
+                        if (is_numeric($userParts[0]) && isset($userParts[1])) {
+                            $userId = (int)$userParts[0];
+                            // Check if provided user id and user email point to the same user. we do this to prevent typo mistakes which lead to possible unwanted access
+                            $userById = Craft::$app->users->getUserById($userId);
+                            $userByUsernameOrEmail = Craft::$app->users->getUserByUsernameOrEmail($userParts[1]);
+                            if (!$userById) {
+                                throw new ServerErrorHttpException("The user id $userId does not return a user");
+                            }
+                            if (!$userByUsernameOrEmail) {
+                                throw new ServerErrorHttpException("The $userParts[1] does not return a user");
+                            }
+                            if ($userById->id != $userByUsernameOrEmail->id) {
+                                throw new ServerErrorHttpException("The $userId and $userParts[1] does not return same user");
+                            }
+                            $this->chatIdUsers[$supportedChatId] = $userId;
+                        } else {
+                            $this->chatIdUsers[$supportedChatId] = null;
                         }
-                        if (!$userByUsernameOrEmail) {
-                            throw new ServerErrorHttpException("The $userParts[1] does not return a user");
-                        }
-                        if ($userById->id != $userByUsernameOrEmail->id) {
-                            throw new ServerErrorHttpException("The $userId and $userParts[1] does not return same user");
-                        }
-                        $this->chatIdUsers[$supportedChatId] = $userId;
                     } else {
-                        $this->chatIdUsers[$supportedChatId] = null;
+                        throw new ServerErrorHttpException('The format of provided user is not valid: ' . $userParts[0]);
                     }
-                } else {
-                    throw new ServerErrorHttpException('The format of provided user is not valid: ' . $userParts[0]);
                 }
             }
         }
@@ -384,7 +413,7 @@ class DefaultController extends Controller
 
         // Don't respond to user if they are not in supported chat id lists, if other telegram chat ids can't send GQL queries and if /chatId command is not allowed or sent
         if (!in_array($this->chatId, $this->supportedChatIds) && (App::parseEnv('$ALLOW_OTHER_TELEGRAM_CHAT_IDS_GQL') != 'true') && (strtolower($this->updateText) != '/chatid' || App::parseEnv('$ALLOW_CHAT_ID_COMMAND') != 'true')) {
-            craft::warning('A not valid chatId recieved' . $this->chatId);
+            craft::warning('A not valid chatId received' . $this->chatId);
             return;
         }
 
@@ -858,6 +887,9 @@ class DefaultController extends Controller
         $cache = Craft::$app->getCache();
         $queryType = $cache->get('query_type_' . $this->chatId);
         $steps = $cache->get('steps_' . $queryType);
+        $currentVersion = craft::$app->getVersion();
+        $versionCompare = version_compare($currentVersion, '4.8.0');
+
         if ($step == 'home') {
             $items = [];
             if (isset($this->chatIdUsers[$this->chatId]) && General::canAccessTools($this->chatIdUsers[$this->chatId])) {
@@ -867,7 +899,7 @@ class DefaultController extends Controller
                 $item['item_per_row'] = 2;
                 array_push($items, $item);
             }
-            if ((Craft::$app->getEdition() === Craft::Pro) && (App::parseEnv('$GRAPHQL_API') && (App::parseEnv('$GRAPHQL_API') != '$GRAPHQL_API')) && $this->gqlAccessToken) {
+            if ((Craft::$app->getEdition() === Craft::Pro || $versionCompare >= 0) && (App::parseEnv('$GRAPHQL_API') && (App::parseEnv('$GRAPHQL_API') != '$GRAPHQL_API')) && $this->gqlAccessToken) {
                 $item = [];
                 $item['text'] = Craft::t('telegram-bridge', 'Queries', [], $this->language) . '❓';
                 $item['callback_data'] = 'Queries❓';
@@ -922,8 +954,8 @@ class DefaultController extends Controller
                 }
             }
         } elseif ($step == 'queries') {
-            if (Craft::$app->getEdition() !== Craft::Pro) {
-                craft::warning('there is a request for queries but Craft version is solo');
+            if ((Craft::$app->getEdition() !== Craft::Pro && $versionCompare < 0)) {
+                craft::warning('there is a request for queries but Craft version is solo under 4.8');
                 return null;
             }
             if (App::parseEnv('$GRAPHQL_API') && (App::parseEnv('$GRAPHQL_API') == '$GRAPHQL_API')) {
@@ -1488,7 +1520,10 @@ class DefaultController extends Controller
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         $response = curl_exec($ch);
         $result = json_decode($response, true);
-        if (isset($result['errors'])) {
+        $info = curl_getinfo($ch);
+        if ($info['http_code'] == '404' || $info['http_code'] == '301') {
+            $messageText = craft::t('telegram-bridge', 'Graphql API not found.', [], $this->language);
+        } elseif (isset($result['errors'])) {
             $messageText = ($result['errors'][0]['debugMessage'] ?? ' ') . ' ' . ($result['errors'][0]['message'] ?? ' ');
         } else {
             $showQuery = App::parseEnv('$SHOW_GRAPHQL_QUERY');
@@ -1633,7 +1668,7 @@ class DefaultController extends Controller
         if (isset($message)) {
             $data['text'] = $message;
         } else {
-            $data['text'] = 'No result';
+            $data['text'] = craft::t('telegram-bridge', 'No result', [], $this->language);
         }
         if ($replyMarkup) {
             $data['reply_markup'] = json_encode($replyMarkup);
