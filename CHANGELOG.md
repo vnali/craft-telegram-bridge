@@ -1,6 +1,6 @@
 # Release Notes for Telegram Bridge plugin
 
-## Unreleased
+## 0.3.0 - 2024-03-01
 
 - Telegram chats can now execute GraphQL queries if the Craft version is 4.8.0 or higher.
 - Improved error message when the GraphQL API page is not found.
