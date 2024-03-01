@@ -7,7 +7,7 @@ This plugin is in the development phase.
 Please visit [Documentation page](https://github.com/vnali/craft-telegram-bridge-docs/blob/main/README.md).
 
 ## License & Pricing
-This is going to be a commercial plugin available through the Craft plugin store.
+This is a commercial plugin available through the [Craft plugin store](https://plugins.craftcms.com/telegram-bridge?craft4).
 
 ## Requirement
 Craft 4.5 and higher.
