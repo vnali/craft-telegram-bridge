@@ -187,7 +187,7 @@ class SettingsController extends Controller
                                 $errors[] = "There is no user, $supportedChatIdsUser[$key] for userId $userId";
                             }
                             if (!$userByUsernameOrEmail) {
-                                $errors[] = "There is no user, $supportedChatIdsUser[$key] for $userParts[1] username/email";
+                                $errors[] = "There is no user, $supportedChatIdsUser[$key] for $userParts[1] username";
                             }
                             if (isset($userById) && isset($userByUsernameOrEmail) && $userById->id != $userByUsernameOrEmail->id) {
                                 $errors[] = "The user id $userId and token name $userParts[1] does not return same user.";

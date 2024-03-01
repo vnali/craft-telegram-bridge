@@ -14,6 +14,8 @@ return [
     'date range' => 'date range',
     'Delete Webhook' => 'Delete Webhook',
     'Delivered' => 'Delivered',
+    'Due to recent changes in application configuration, please reselect one option from main list.' => 'Due to recent changes in application configuration, please reselect one option from main list.',
+    'Due to recent changes in user preferences, please reselect one option from main list.' => 'Due to recent changes in user preferences, please reselect one option from main list.',
     'Errors' => 'Errors',
     'Format of {item} is not valid.' => 'Format of {item} is not valid.',
     'Get updates' => 'Get updates',

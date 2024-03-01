@@ -21,6 +21,12 @@ class chatIdService extends Component
      */
     public function getChatIdByUser(string $username): ?string
     {
+        if (!App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS') || App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS') == '$ALLOWED_TELEGRAM_CHAT_IDS') {
+            return null;
+        }
+        if (!App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS_USER') || App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS_USER') == '$ALLOWED_TELEGRAM_CHAT_IDS_USER') {
+            return null;
+        }
         $supportedChatIds = explode('||', App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS'));
         $supportedChatIdsUser = explode('||', App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS_USER'));
         // Check if count of telegram chat ids and their users are equal
@@ -55,6 +61,12 @@ class chatIdService extends Component
      */
     public function getUserByChatId(string $chatId): ?User
     {
+        if (!App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS') || App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS') == '$ALLOWED_TELEGRAM_CHAT_IDS') {
+            return null;
+        }
+        if (!App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS_USER') || App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS_USER') == '$ALLOWED_TELEGRAM_CHAT_IDS_USER') {
+            return null;
+        }
         $supportedChatIds = explode('||', App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS'));
         $supportedChatIdsUser = explode('||', App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS_USER'));
         // Check if count of telegram chat ids and their users are equal

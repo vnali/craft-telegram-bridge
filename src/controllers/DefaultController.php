@@ -419,12 +419,20 @@ class DefaultController extends Controller
 
         // if the /start is pressed, the user's record who sent the message is changed, .env file is modified or plugin cache is deleted start again
         if ($this->updateText == '/start' || $cache->get('user_changed_' . $this->chatId) || !$cache->get('env_is_not_modified') || !$cache->get('cache_is_not_deleted')) {
+            // keep user_changed before cache invalidation
+            $userChanged = $cache->get('user_changed_' . $this->chatId);
             TagDependency::invalidate(Craft::$app->getCache(), 'telegram-bridge-' . $this->chatId);
             $cache->set('env_is_not_modified', 1, 0, new FileDependency([
                 'fileName' => Craft::getAlias('@dotenv'),
             ]));
             $cache->set('cache_is_not_deleted', 1, 0, new TagDependency(['tags' => ['telegram-bridge']]));
-            $data = $this->createResponse('home');
+            if ($this->updateText == '/start') {
+                $data = $this->createResponse('home');
+            } elseif ($userChanged) {
+                $data = $this->createResponse('user_changed');
+            } else {
+                $data = $this->createResponse('restart');
+            }
             $cache->set('next_message_type_' . $this->chatId, 'home', 0, new TagDependency(['tags' => ['telegram-bridge', 'telegram-bridge-' . $this->chatId]]));
         } elseif (strtolower($this->updateText) == '/chatid') {
             if (App::parseEnv('$ALLOW_CHAT_ID_COMMAND') == 'true') {
@@ -758,7 +766,7 @@ class DefaultController extends Controller
         }
         if (isset($items)) {
             $replyMarkup = $this->actionCreateKeyboard($keyboard, $items, true, false);
-            if ($step == 'home' && $items == []) {
+            if (($step == 'home' || $step == 'restart' || $step == 'user_changed') && $items == []) {
                 $data = null;
             } else {
                 $messageText = $this->actionCreateMessageText($step);
@@ -890,7 +898,7 @@ class DefaultController extends Controller
         $currentVersion = craft::$app->getVersion();
         $versionCompare = version_compare($currentVersion, '4.8.0');
 
-        if ($step == 'home') {
+        if ($step == 'home' || $step == 'restart' || $step == 'user_changed') {
             $items = [];
             if (isset($this->chatIdUsers[$this->chatId]) && General::canAccessTools($this->chatIdUsers[$this->chatId])) {
                 $item = [];
@@ -1616,6 +1624,10 @@ class DefaultController extends Controller
         $cache = Craft::$app->getCache();
         if ($message_type == 'home' || $message_type == 'tools' || $message_type == 'queries') {
             $messageText = Craft::t('telegram-bridge', 'Please select an option.', [], $this->language);
+        } elseif ($message_type == 'user_changed') {
+            $messageText = Craft::t('telegram-bridge', 'Due to recent changes in user preferences, please reselect one option from main list.', [], $this->language);
+        } elseif ($message_type == 'restart') {
+            $messageText = Craft::t('telegram-bridge', 'Due to recent changes in application configuration, please reselect one option from main list.', [], $this->language);
         } else {
             $action = 'Please select';
             $queryType = $cache->get('query_type_' . $this->chatId);
