@@ -157,20 +157,17 @@ class DefaultController extends Controller
                 }
                 if (isset($supportedChatIdsUser[$key])) {
                     $userParts = explode('-', $supportedChatIdsUser[$key], 2);
-                    // can be in format of userId-email/username or null
+                    // can be in format of userId-username or null
                     if ((is_numeric($userParts[0]) && isset($userParts[1])) || !$userParts[0] || $userParts[0] == '$ALLOWED_TELEGRAM_CHAT_IDS_USER') {
                         if (is_numeric($userParts[0]) && isset($userParts[1])) {
                             $userId = (int)$userParts[0];
                             // Check if provided user id and user email point to the same user. we do this to prevent typo mistakes which lead to possible unwanted access
                             $userById = Craft::$app->users->getUserById($userId);
-                            $userByUsernameOrEmail = Craft::$app->users->getUserByUsernameOrEmail($userParts[1]);
+                            $username = $userById->username;
                             if (!$userById) {
                                 throw new ServerErrorHttpException("The user id $userId does not return a user");
                             }
-                            if (!$userByUsernameOrEmail) {
-                                throw new ServerErrorHttpException("The $userParts[1] does not return a user");
-                            }
-                            if ($userById->id != $userByUsernameOrEmail->id) {
+                            if ($username != $userParts[1]) {
                                 throw new ServerErrorHttpException("The $userId and $userParts[1] does not return same user");
                             }
                             $this->chatIdUsers[$supportedChatId] = $userId;

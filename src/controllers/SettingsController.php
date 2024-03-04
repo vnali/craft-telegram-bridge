@@ -182,14 +182,11 @@ class SettingsController extends Controller
                             $userId = (int)$userParts[0];
                             // Check if provided user id and user email point to same user. we do this to prevent possible mistakes
                             $userById = Craft::$app->users->getUserById($userId);
-                            $userByUsernameOrEmail = Craft::$app->users->getUserByUsernameOrEmail($userParts[1]);
+                            $username = $userById->username;
                             if (!$userById) {
                                 $errors[] = "There is no user, $supportedChatIdsUser[$key] for userId $userId";
                             }
-                            if (!$userByUsernameOrEmail) {
-                                $errors[] = "There is no user, $supportedChatIdsUser[$key] for $userParts[1] username";
-                            }
-                            if (isset($userById) && isset($userByUsernameOrEmail) && $userById->id != $userByUsernameOrEmail->id) {
+                            if (isset($userById) && $username != $userParts[1]) {
                                 $errors[] = "The user id $userId and token name $userParts[1] does not return same user.";
                             } else {
                                 $users[$supportedChatId] = $userParts[1];

@@ -40,8 +40,8 @@ class chatIdService extends Component
                     $userId = (int)$userParts[0];
                     // Check if provided user id and user email point to same user. we do this to prevent possible mistakes
                     $userById = Craft::$app->users->getUserById($userId);
-                    $userByUsernameOrEmail = Craft::$app->users->getUserByUsernameOrEmail($userParts[1]);
-                    if ($userById->id != $userByUsernameOrEmail->id) {
+                    $usernameById = $userById->username;
+                    if ($usernameById != $userParts[1]) {
                         return null;
                     }
                     return $supportedChatId;
@@ -76,12 +76,12 @@ class chatIdService extends Component
         foreach ($supportedChatIds as $key => $supportedChatId) {
             if ($chatId == $supportedChatId) {
                 $userParts = explode('-', $supportedChatIdsUser[$key], 2);
-                if (is_numeric($userParts[0]) && $userParts[1]) {
+                if (is_numeric($userParts[0]) && isset($userParts[1])) {
                     $userId = (int)$userParts[0];
                     // Check if provided user id and user email point to same user. we do this to prevent possible mistakes
                     $userById = Craft::$app->users->getUserById($userId);
-                    $userByUsernameOrEmail = Craft::$app->users->getUserByUsernameOrEmail($userParts[1]);
-                    if ($userById->id != $userByUsernameOrEmail->id) {
+                    $username = $userById->name;
+                    if ($username != $userParts[1]) {
                         return null;
                     }
                     return $userById;
