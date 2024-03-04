@@ -1,6 +1,6 @@
 # Release Notes for Telegram Bridge plugin
 
-## Unreleased
+## 0.3.1 - 2024-03-04
 
 - Fixed a bug where $ALLOWED_TELEGRAM_CHAT_IDS_USER environment setting was not validated correctly.
 
