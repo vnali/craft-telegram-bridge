@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Better validation for GRAPHQL_QUERY_FIELD environment setting.
+- Fixed a php error which occurred where specified GRAPHQL_QUERY_FIELD was not available in the entry layout.
 
 ## 0.3.1 - 2024-03-04
 
