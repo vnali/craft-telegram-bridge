@@ -615,7 +615,11 @@ class DefaultController extends Controller
                                     // Check if it is menu
                                     $gqlField = App::parseEnv('$GRAPHQL_QUERY_FIELD');
                                     if (!$gqlField || $gqlField == '$GRAPHQL_QUERY_FIELD') {
-                                        throw new ServerErrorHttpException('Graph QL query field is not specified');
+                                        throw new ServerErrorHttpException('GraphQL query field is not specified');
+                                    }
+                                    $entryLayout = $entry->getFieldLayout();
+                                    if (!$entryLayout->isFieldIncluded($gqlField)) {
+                                        throw new ServerErrorHttpException($gqlField . ' field is not available in layout');
                                     }
                                     $gqlQuery = $entry->{$gqlField};
                                     if (!$gqlQuery) {
@@ -1575,36 +1579,38 @@ class DefaultController extends Controller
                         }
                     }
                 }
-            }
-            if (isset($sections)) {
-                // Currently only we show queries in primary site
-                $query = Entry::find()->section($sections);
-                $descendantOf = $cache->get('descendantOf_' . $this->chatId);
-                if ($descendantOf) {
-                    $query->descendantOf($descendantOf);
-                    $query->descendantDist(1);
-                } else {
-                    $query->level(1);
-                }
-                $query->orderBy('entries.sectionId asc, content.title asc');
-                $entries = $query->all();
-                $queryField = App::parseEnv('$GRAPHQL_QUERY_FIELD');
-                foreach ($entries as $entry) {
-                    // make sure if it has title
-                    if ($entry->title) {
-                        $item = [];
-                        $item['text'] = $entry->title . ((isset($entry->$queryField) && $entry->getFieldValue($queryField)) ? '❓' : ' 📂');
-                        $item['callback_data'] = $entry->id;
-                        if (strlen($entry->title) > 20 || (!isset($entry->$queryField) || !$entry->getFieldValue($queryField))) {
-                            // categories have new lines
-                            $item['new_row_before'] = true;
-                            $item['new_row_after'] = true;
-                        }
-                        array_push($items, $item);
+                if (isset($sections)) {
+                    // Currently only we show queries in primary site
+                    $query = Entry::find()->section($sections);
+                    $descendantOf = $cache->get('descendantOf_' . $this->chatId);
+                    if ($descendantOf) {
+                        $query->descendantOf($descendantOf);
+                        $query->descendantDist(1);
+                    } else {
+                        $query->level(1);
                     }
+                    $query->orderBy('entries.sectionId asc, content.title asc');
+                    $entries = $query->all();
+                    $queryField = App::parseEnv('$GRAPHQL_QUERY_FIELD');
+                    foreach ($entries as $entry) {
+                        // make sure if it has title
+                        if ($entry->title) {
+                            $item = [];
+                            $item['text'] = $entry->title . ((isset($entry->$queryField) && $entry->getFieldValue($queryField)) ? '❓' : ' 📂');
+                            $item['callback_data'] = $entry->id;
+                            if (strlen($entry->title) > 20 || (!isset($entry->$queryField) || !$entry->getFieldValue($queryField))) {
+                                // categories have new lines
+                                $item['new_row_before'] = true;
+                                $item['new_row_after'] = true;
+                            }
+                            array_push($items, $item);
+                        }
+                    }
+                } else {
+                    craft::warning('there are no sections with structure type available via schema to show GQL queries.');
                 }
             } else {
-                craft::warning('there are no sections with structure type to show GQL queries.');
+                craft::warning($this->gqlAccessToken . ' has not read access to any sections');
             }
         }
         return $items;
