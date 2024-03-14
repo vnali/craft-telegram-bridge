@@ -116,7 +116,7 @@ class CommerceTool implements ToolTypeInterface
             array_push($items, $item);
             foreach (PluginCommerce::getInstance()->getOrderStatuses()->getAllOrderStatuses() as $orderStatus) {
                 $item = [];
-                $item['text'] = Craft::t('telegram-bridge', $orderStatus->name, [], $language);
+                $item['text'] = Craft::t('site', $orderStatus->name, [], $language);
                 $item['callback_data'] = $orderStatus->name;
                 array_push($items, $item);
                 $allOrderStatusIds[$orderStatus->name] = $orderStatus->id;
@@ -127,7 +127,7 @@ class CommerceTool implements ToolTypeInterface
             $items = [];
             foreach (PluginCommerce::getInstance()->getOrderStatuses()->getAllOrderStatuses() as $orderStatus) {
                 $item = [];
-                $item['text'] = Craft::t('telegram-bridge', $orderStatus->name, [], $language);
+                $item['text'] = Craft::t('site', $orderStatus->name, [], $language);
                 $item['callback_data'] = $orderStatus->name;
                 array_push($items, $item);
                 $allOrderStatusUids[$orderStatus->name] = $orderStatus->uid;
@@ -541,7 +541,7 @@ class CommerceTool implements ToolTypeInterface
             $time = craft::t('telegram-bridge', $_stat->getDateRangeWording(), [], $language);
             $timeFrame = Craft::t('app', 'Date Range', [], $language);
             $orderStatuses = array_map(static function($orderStatus) use ($language) {
-                return craft::t('telegram-bridge', $orderStatus, [], $language);
+                return craft::t('site', $orderStatus, [], $language);
             }, $orderStatuses);
             $messageText = $tool . ': ' . '<b>' . $totalValue . '</b>' . PHP_EOL . $timeFrame . ': ' . $time . PHP_EOL . craft::t('commerce', 'Order Status', [], $language) . ': ' . implode('-', $orderStatuses);
         } elseif ($toolType == self::Total_Orders) {
@@ -588,7 +588,7 @@ class CommerceTool implements ToolTypeInterface
             $time = craft::t('telegram-bridge', $_stat->getDateRangeWording(), [], $language);
             $timeFrame = Craft::t('app', 'Date Range', [], $language);
             $orderStatuses = array_map(static function($orderStatus) use ($language) {
-                return craft::t('telegram-bridge', $orderStatus, [], $language);
+                return craft::t('site', $orderStatus, [], $language);
             }, $orderStatuses);
             $title = $tool . PHP_EOL . $timeFrame . ': ' . $time . PHP_EOL . craft::t('commerce', 'Order Status', [], $language) . ': ' . implode('-', $orderStatuses);
             $messageText = $title . PHP_EOL . PHP_EOL . '<pre>' . $table . '</pre>';
@@ -669,7 +669,7 @@ class CommerceTool implements ToolTypeInterface
             $time = craft::t('telegram-bridge', $_stat->getDateRangeWording(), [], $language);
             $timeFrame = Craft::t('app', 'Date Range', [], $language);
             $orderStatuses = array_map(static function($orderStatus) use ($language) {
-                return craft::t('telegram-bridge', $orderStatus, [], $language);
+                return craft::t('site', $orderStatus, [], $language);
             }, $orderStatuses);
             $title = $tool . ' (' . craft::t('commerce', $totalOrdersCountryType, [], $language) . ')' . PHP_EOL . $timeFrame . ': ' . $time . PHP_EOL . craft::t('commerce', 'Order Status', [], $language) . ': ' . implode('-', $orderStatuses);
             $messageText = $title . PHP_EOL . PHP_EOL . '<pre>' . $table . '</pre>';
@@ -792,7 +792,7 @@ class CommerceTool implements ToolTypeInterface
             $time = craft::t('telegram-bridge', $_stat->getDateRangeWording(), [], $language);
             $timeFrame = Craft::t('app', 'Date Range', [], $language);
             $orderStatuses = array_map(static function($orderStatus) use ($language) {
-                return craft::t('telegram-bridge', $orderStatus, [], $language);
+                return craft::t('site', $orderStatus, [], $language);
             }, $orderStatuses);
             $totalRType = $cache->get('totalRevenueType_' . $chatId);
             $totalOrders = Craft::t('commerce', 'Total revenue', [], $language) . ': ' . $formattedTotal;
@@ -884,7 +884,7 @@ class CommerceTool implements ToolTypeInterface
             $time = craft::t('telegram-bridge', $_stat->getDateRangeWording(), [], $language);
             $timeFrame = Craft::t('app', 'Date Range', [], $language);
             $orderStatuses = array_map(static function($orderStatus) use ($language) {
-                return craft::t('telegram-bridge', $orderStatus, [], $language);
+                return craft::t('site', $orderStatus, [], $language);
             }, $orderStatuses);
             $messageText = $tool . ': ' . '<b>' . $newCustomers . '</b>' . PHP_EOL . $timeFrame . ': ' . $time . PHP_EOL . craft::t('commerce', 'Order Status', [], $language) . ': ' . implode('-', $orderStatuses);
         } elseif ($toolType == self::Recent_Orders) {
@@ -924,7 +924,7 @@ class CommerceTool implements ToolTypeInterface
             $time = craft::t('telegram-bridge', $_stat->getDateRangeWording(), [], $language);
             $timeFrame = Craft::t('app', 'Date Range', [], $language);
             $orderStatuses = array_map(static function($orderStatus) use ($language) {
-                return craft::t('telegram-bridge', $orderStatus, [], $language);
+                return craft::t('site', $orderStatus, [], $language);
             }, $orderStatuses);
             $messageText = $tool . ': ' . '<b>' . $stats['percentage'] . '%' . '</b>' . PHP_EOL . $timeFrame . ': ' . $time . PHP_EOL . craft::t('commerce', 'Order Status', [], $language) . ': ' . implode('-', $orderStatuses);
         } elseif ($toolType == self::Top_Customers) {
@@ -957,7 +957,7 @@ class CommerceTool implements ToolTypeInterface
             $time = craft::t('telegram-bridge', $_stat->getDateRangeWording(), [], $language);
             $timeFrame = Craft::t('app', 'Date Range', [], $language);
             $orderStatuses = array_map(static function($orderStatus) use ($language) {
-                return craft::t('telegram-bridge', $orderStatus, [], $language);
+                return craft::t('site', $orderStatus, [], $language);
             }, $orderStatuses);
             $title = $tool . ' (' . craft::t('commerce', $topCustomersType, [], $language) . ')' . PHP_EOL . $timeFrame . ': ' . $time . PHP_EOL . craft::t('commerce', 'Order Status', [], $language) . ': ' . implode('-', $orderStatuses);
             $messageText = $title . PHP_EOL . PHP_EOL . '<pre>' . $table . '</pre>';
@@ -991,7 +991,7 @@ class CommerceTool implements ToolTypeInterface
             $time = craft::t('telegram-bridge', $_stat->getDateRangeWording(), [], $language);
             $timeFrame = Craft::t('app', 'Date Range', [], $language);
             $orderStatuses = array_map(static function($orderStatus) use ($language) {
-                return craft::t('telegram-bridge', $orderStatus, [], $language);
+                return craft::t('site', $orderStatus, [], $language);
             }, $orderStatuses);
             $title = $tool . ' (' . craft::t('commerce', $topProductTypesType, [], $language) . ')' . PHP_EOL . $timeFrame . ': ' . $time . PHP_EOL . craft::t('commerce', 'Order Status', [], $language) . ': ' . implode('-', $orderStatuses);
             $messageText = $title . PHP_EOL . PHP_EOL . '<pre>' . $table . '</pre>';
@@ -1026,7 +1026,7 @@ class CommerceTool implements ToolTypeInterface
             $time = craft::t('telegram-bridge', $_stat->getDateRangeWording(), [], $language);
             $timeFrame = Craft::t('app', 'Date Range', [], $language);
             $orderStatuses = array_map(static function($orderStatus) use ($language) {
-                return craft::t('telegram-bridge', $orderStatus, [], $language);
+                return craft::t('site', $orderStatus, [], $language);
             }, $orderStatuses);
             $revenueOptions = array_map(static function($revenueOption) use ($language) {
                 return craft::t('telegram-bridge', $revenueOption, [], $language);
@@ -1064,7 +1064,7 @@ class CommerceTool implements ToolTypeInterface
             $time = craft::t('telegram-bridge', $_stat->getDateRangeWording(), [], $language);
             $timeFrame = Craft::t('app', 'Date Range', [], $language);
             $orderStatuses = array_map(static function($orderStatus) use ($language) {
-                return craft::t('telegram-bridge', $orderStatus, [], $language);
+                return craft::t('site', $orderStatus, [], $language);
             }, $orderStatuses);
             $title = $tool . ' (' . craft::t('commerce', $topPurchasablesType, [], $language) . ')' . PHP_EOL . $timeFrame . ': ' . $time . PHP_EOL . craft::t('commerce', 'Order Status', [], $language) . ': ' . implode('-', $orderStatuses);
             $messageText = $title . PHP_EOL . PHP_EOL . '<pre>' . $table . '</pre>';
