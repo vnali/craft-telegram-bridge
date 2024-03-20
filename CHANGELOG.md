@@ -4,6 +4,7 @@
 
 - Fixed a php error which occurred where specified GRAPHQL_QUERY_FIELD was not available in the entry layout.
 - Fixed a bug where translation for order status were returned by the plugin translation file not the project translation file.
+- Fixed the result table for the Top Product Types tool where the header displayed 'Customer' instead of 'Name'.
 
 ## 0.3.1 - 2024-03-04
 

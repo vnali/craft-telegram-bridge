@@ -977,7 +977,7 @@ class CommerceTool implements ToolTypeInterface
             $stats = $_stat->get();
             // Render table
             $tableBuilder = new \MaddHatter\MarkdownTable\Builder();
-            $tableBuilder->headers([craft::t('commerce', 'Customer', [], $language), craft::t('commerce', $topProductTypesType, [], $language)])->align(['L', 'L']); // set column alignment
+            $tableBuilder->headers([craft::t('commerce', 'Name', [], $language), craft::t('commerce', $topProductTypesType, [], $language)])->align(['L', 'L']); // set column alignment
             foreach ($stats as $key => $stat) {
                 $formattedValue = $stat['qty'];
                 if ($topProductTypesType == 'Revenue') {
