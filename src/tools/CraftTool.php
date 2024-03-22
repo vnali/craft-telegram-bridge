@@ -90,7 +90,7 @@ class CraftTool implements ToolTypeInterface
             return array(false, craft::t('telegram-bridge', 'User is not defined for this chat id.'));
         }
         if ($sectionId != '*') {
-            $section = Craft::$app->sections->getSectionById((int)$sectionId);
+            $section = Craft::$app->entries->getSectionById((int)$sectionId);
             if (!$section) {
                 return array(false, craft::t('telegram-bridge', 'Selected section is not valid.'));
             }
@@ -233,7 +233,7 @@ class CraftTool implements ToolTypeInterface
                 }
             }
         } elseif ($step == 'sectionId') {
-            $sections = Craft::$app->sections->getAllSections();
+            $sections = Craft::$app->entries->getAllSections();
             $items = [];
             $item = [];
             $item['text'] = craft::t('app', 'All', [], $language);
@@ -388,7 +388,7 @@ class CraftTool implements ToolTypeInterface
             return [];
         }
 
-        return ArrayHelper::where(Craft::$app->getSections()->getAllSections(), function(Section $section) use ($user) {
+        return ArrayHelper::where(Craft::$app->entries->getAllSections(), function(Section $section) use ($user) {
             return $user->can("viewEntries:$section->uid");
         }, true, true, false);
     }

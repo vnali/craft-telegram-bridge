@@ -609,7 +609,7 @@ class DefaultController extends Controller
                         $token = Craft::$app->gql->getTokenByAccessToken($this->gqlAccessToken);
                         $pairs = GqlHelper::extractAllowedEntitiesFromSchema('read', $token->getSchema());
                         if (isset($pairs['sections'])) {
-                            $section = craft::$app->sections->getSectionById($sectionId);
+                            $section = craft::$app->entries->getSectionById($sectionId);
                             if ($section->type == 'structure') {
                                 if (in_array($section->uid, $pairs['sections']) && in_array($section->handle, $sectionHandles)) {
                                     // Check if it is menu
@@ -801,7 +801,11 @@ class DefaultController extends Controller
             $this->stepCounter++;
             $skip = false;
             if ($stepKey != 'offset' && $cache->get($stepKey . '_' . $this->chatId) === false) {
-                // Check only if this step is depended to other items
+                // Skip this step if it is marked as skip
+                if (isset($steps[$stepKey]['skip']) && $steps[$stepKey]['skip']) {
+                    continue;
+                }
+                // Check only if this step is depended to other step
                 if (isset($steps[$stepKey]['showIf'])) {
                     foreach ($steps[$stepKey]['showIf'] as $showIfKey => $showIf) {
                         if (!in_array(strtolower($cache->get($showIfKey . '_' . $this->chatId)), $showIf)) {
@@ -1021,7 +1025,7 @@ class DefaultController extends Controller
                 $items = array_merge($items, $queryItems);
             }
         } elseif ($cache->get('current_menu_' . $this->chatId) == 'queries' && ($step == 'section' || $step == 'sectionId')) {
-            $sections = Craft::$app->sections->getAllSections();
+            $sections = Craft::$app->entries->getAllSections();
             $token = Craft::$app->gql->getTokenByAccessToken($this->gqlAccessToken);
             $pairs = GqlHelper::extractAllowedEntitiesFromSchema('read', $token->getSchema());
             $items = [];
@@ -1060,7 +1064,7 @@ class DefaultController extends Controller
             $allowedSectionIds = [];
             if (isset($pairs['sections']) && $pairs['sections']) {
                 foreach ($pairs['sections'] as $sec) {
-                    $sect = Craft::$app->sections->getSectionByUid($sec);
+                    $sect = Craft::$app->entries->getSectionByUid($sec);
                     $allowedSectionIds[] = $sect->id;
                 }
             }
@@ -1088,7 +1092,7 @@ class DefaultController extends Controller
                 $sectionIds = [];
                 foreach ($selectedSectionHandles as $sec) {
                     if ($sec != 'not') {
-                        $sectionByHandle = Craft::$app->sections->getSectionByHandle($sec);
+                        $sectionByHandle = Craft::$app->entries->getSectionByHandle($sec);
                         if ($sectionByHandle) {
                             $sectionIds[] = $sectionByHandle->id;
                         }
@@ -1110,38 +1114,34 @@ class DefaultController extends Controller
             $entryTypes = [];
             if ($allowedSectionIds) {
                 foreach ($allowedSectionIds as $allowedSectionId) {
-                    $entryTypes[] = Craft::$app->sections->getEntryTypesBySectionId($allowedSectionId);
+                    foreach (Craft::$app->entries->getEntryTypesBySectionId($allowedSectionId) as $entryType) {
+                        $sectionById = Craft::$app->entries->getSectionById($allowedSectionId);
+                        $entryTypes[$sectionById->name] = $entryType;
+                    }
                 }
             }
-            $entryTypes = array_merge(...$entryTypes);
             $token = Craft::$app->gql->getTokenByAccessToken($this->gqlAccessToken);
-            // TODO: Craft 5 does not have entry types in schema
-            $pairs = GqlHelper::extractAllowedEntitiesFromSchema('read', $token->getSchema());
             $itemsCount = 0;
             $items = [];
-            if (isset($pairs['entrytypes']) && $pairs['entrytypes']) {
-                foreach ($entryTypes as $entryType) {
-                    if (in_array($entryType->uid, $pairs['entrytypes'])) {
-                        $itemsCount++;
-                        $item = [];
-                        $item['text'] = $entryType->getSection()->name . ' - ' . $entryType->name;
-                        $item['callback_data'] = ($step == 'type') ? $entryType->handle : $entryType->id;
-                        array_push($items, $item);
-                    }
-                }
-                if ($itemsCount > 1) {
+            foreach ($entryTypes as $sectionName => $entryType) {
+                $itemsCount++;
+                $item = [];
+                $item['text'] = $sectionName . '-' . $entryType->name;
+                $item['callback_data'] = ($step == 'type') ? $entryType->handle : $entryType->id;
+                array_push($items, $item);
+            }
+            if ($itemsCount > 1) {
+                $item = [];
+                $item['text'] = 'not';
+                $item['callback_data'] = 'not';
+                $item['new_row_before'] = true;
+                array_push($items, $item);
+                if ($step == 'type') {
                     $item = [];
-                    $item['text'] = 'not';
-                    $item['callback_data'] = 'not';
+                    $item['text'] = 'all';
+                    $item['callback_data'] = '*';
                     $item['new_row_before'] = true;
                     array_push($items, $item);
-                    if ($step == 'type') {
-                        $item = [];
-                        $item['text'] = 'all';
-                        $item['callback_data'] = '*';
-                        $item['new_row_before'] = true;
-                        array_push($items, $item);
-                    }
                 }
             }
         } elseif ($cache->get('current_menu_' . $this->chatId) == 'queries' && ($step == 'site' || $step == 'siteId')) {
@@ -1572,7 +1572,7 @@ class DefaultController extends Controller
             $pairs = GqlHelper::extractAllowedEntitiesFromSchema('read', $token->getSchema());
             if (isset($pairs['sections'])) {
                 foreach ($sectionHandles as $sectionHandle) {
-                    $section = craft::$app->sections->getSectionByHandle($sectionHandle);
+                    $section = craft::$app->entries->getSectionByHandle($sectionHandle);
                     if ($section->type == 'structure') {
                         if (in_array($section->uid, $pairs['sections'])) {
                             $sections[] = $sectionHandle;
@@ -1589,7 +1589,7 @@ class DefaultController extends Controller
                     } else {
                         $query->level(1);
                     }
-                    $query->orderBy('entries.sectionId asc, content.title asc');
+                    $query->orderBy('entries.sectionId asc, elements_sites.title asc');
                     $entries = $query->all();
                     $queryField = App::parseEnv('$GRAPHQL_QUERY_FIELD');
                     foreach ($entries as $entry) {

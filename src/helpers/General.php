@@ -8,6 +8,7 @@ namespace vnali\telegrambridge\helpers;
 
 use Craft;
 use vnali\telegrambridge\TelegramBridge;
+use craft\commerce\Plugin as PluginCommerce;
 
 class General
 {
@@ -59,5 +60,24 @@ class General
             }
         }
         return false;
+    }
+
+    /**
+     * Check if the chat id has access to multiple stores
+     *
+     * @param string $chatId
+     * @return bool
+     */
+    public static function hasAccessToMultiStores(string $chatId)
+    {
+        $multiple = false;
+        $user = TelegramBridge::$plugin->chatId->getUserByChatId($chatId);
+        if ($user) {
+            $stores = PluginCommerce::getInstance()->getStores()->getStoresByUserId($user->id);
+            if ($stores->count() > 1) {
+                $multiple = true;
+            }
+        }
+        return $multiple;
     }
 }

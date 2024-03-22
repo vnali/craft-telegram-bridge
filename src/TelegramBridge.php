@@ -67,15 +67,8 @@ class TelegramBridge extends Plugin
         parent::init();
         self::$plugin = $this;
 
-        // Only show CP section if user can access one of get updates or setting pages
-        $allowAdminChanges = Craft::$app->getConfig()->getGeneral()->allowAdminChanges;
-        $user = Craft::$app->getUser();
-        $cpSection = false;
-        if (($allowAdminChanges && $user->checkPermission('telegram-bridge-manageSettings')) || $user->checkPermission('telegram-bridge-getUpdates')) {
-            $cpSection = true;
-        }
 
-        $this->hasCpSection = $cpSection;
+        $this->hasCpSection = true;
         $this->hasCpSettings = true;
 
         $this->_registerRules();

@@ -16,11 +16,15 @@ class chatIdService extends Component
     /**
      * Get the chat id by user
      *
-     * @param string $username
+     * @param string|null $username
      * @return string|null
      */
-    public function getChatIdByUser(string $username): ?string
+    public function getChatIdByUser(?string $username): ?string
     {
+        // Don't complain if username is passed as null in any case and return null
+        if (!$username) {
+            return null;
+        }
         if (!App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS') || App::parseEnv('$ALLOWED_TELEGRAM_CHAT_IDS') == '$ALLOWED_TELEGRAM_CHAT_IDS') {
             return null;
         }
