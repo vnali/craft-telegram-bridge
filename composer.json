@@ -2,7 +2,7 @@
     "name": "vnali/craft-telegram-bridge",
     "description": "Telegram integration for Craft CMS - Send event messages to Telegram chats and execute GraphQL queries and other tools provided in a telegram bot interface",
     "type": "craft-plugin",
-    "version": "0.3.1",
+    "version": "1.0.0-beta.1",
     "keywords": [
         "craft",
         "cms",
