@@ -1,8 +1,6 @@
 # Telegram Bridge plugin for Craft CMS
 This Craft CMS plugin helps you to integrate Craft CMS with Telegram.
 
-This plugin is in the development phase.
-
 ## Documentation
 Please visit [Documentation page](https://github.com/vnali/craft-telegram-bridge-docs/blob/main/README.md).
 

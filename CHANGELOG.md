@@ -1,5 +1,9 @@
 # Release Notes for Telegram Bridge plugin
 
+## 1.0.0 - 2024-03-23
+
+- Stable release compatible with Craft4, Commerce 4.
+
 ## 1.0.0-beta.1 - 2024-03-22
 
 - Fixed a php error which occurred where specified GRAPHQL_QUERY_FIELD was not available in the entry layout.
